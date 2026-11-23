@@ -294,7 +294,7 @@
 
         <!-- Bottom Status Footer -->
         <div class="mt-4 pt-3 border-t border-[#2F3640] flex items-center justify-between text-xs text-[#9CA3AF]">
-          <span id="enabledPlatformsSummary">4 / 4 akaun aktif</span>
+          <span id="enabledPlatformsSummary">0 / 4 disambung • 0 aktif</span>
           <span class="text-[#3B82F6] font-medium">Storan setempat aktif</span>
         </div>
       </section>
@@ -631,6 +631,35 @@
   </div>
 
   <!-- ===================================================================== -->
+  <!-- MODAL A2: CONNECT PLATFORM ACCOUNT TO PROFILE                         -->
+  <!-- ===================================================================== -->
+  <div id="connectModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="connectModalIcon" class="shrink-0"></div>
+          <div class="min-w-0">
+            <h3 id="connectModalTitle" class="text-base font-semibold text-[#F3F4F6] truncate">Sambung</h3>
+            <p class="text-xs text-[#9CA3AF] truncate">Ke profil <span id="connectModalProfile" class="text-[#3B82F6] font-medium">apajadiclips</span></p>
+          </div>
+        </div>
+        <button type="button" onclick="closeConnectModal()" class="p-2 rounded-xl bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white cursor-pointer">✕</button>
+      </div>
+      <div>
+        <label for="connectModalHandle" class="block text-xs font-medium text-[#F3F4F6] mb-1">Nama akaun</label>
+        <input id="connectModalHandle" type="text" maxlength="60" placeholder="cth: @apajadiclips"
+          onkeydown="if(event.key==='Enter') confirmConnectPlatform()"
+          class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6] placeholder-[#9CA3AF]/60" />
+        <p class="text-[11px] text-[#9CA3AF] mt-1.5">Nama ini dipaparkan pada kad akaun, Live Preview dan jadual hantaran.</p>
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" onclick="closeConnectModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white border border-[#2F3640] cursor-pointer">Batal</button>
+        <button type="button" onclick="confirmConnectPlatform()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">Sambung</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
   <!-- MODAL B: PRE-POSTING PREVIEW & CONFIRMATION MODAL                      -->
   <!-- ===================================================================== -->
   <div id="prePostConfirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
@@ -934,12 +963,28 @@
 
     const DEFAULT_DATE = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
 
+    const DEFAULT_ACCOUNT_LABEL = 'Nama akaun';
+
+    // A platform only takes part in preview/scheduling once it is connected AND switched on
+    function isActive(p) {
+      return !!(p && p.connected && p.enabled);
+    }
+
+    function displayHandle(p) {
+      return p && p.connected && p.handle ? p.handle : DEFAULT_ACCOUNT_LABEL;
+    }
+
+    function suggestHandle(platId, profileName) {
+      const base = String(profileName || '').replace(/\s+/g, '').toLowerCase();
+      return platId === 'fb' ? base : `@${base}`;
+    }
+
     function buildDefaultPlatforms(handleBase) {
       return [
-        { id: 'yt', name: 'YouTube Shorts', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '20:00' },
-        { id: 'fb', name: 'Facebook', handle: handleBase, enabled: true, date: DEFAULT_DATE, time: '20:30' },
-        { id: 'ig', name: 'Instagram', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '21:00' },
-        { id: 'threads', name: 'Threads', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '21:30' }
+        { id: 'yt', name: 'YouTube Shorts', handle: '', connected: false, enabled: true, date: DEFAULT_DATE, time: '20:00' },
+        { id: 'fb', name: 'Facebook', handle: '', connected: false, enabled: true, date: DEFAULT_DATE, time: '20:30' },
+        { id: 'ig', name: 'Instagram', handle: '', connected: false, enabled: true, date: DEFAULT_DATE, time: '21:00' },
+        { id: 'threads', name: 'Threads', handle: '', connected: false, enabled: true, date: DEFAULT_DATE, time: '21:30' }
       ];
     }
 
@@ -1005,7 +1050,8 @@
               const found = plats.find(x => x && x.id === def.id) || {};
               return {
                 ...def,
-                handle: typeof found.handle === 'string' ? found.handle : def.handle,
+                handle: typeof found.handle === 'string' ? found.handle.trim() : def.handle,
+                connected: found.connected === true && typeof found.handle === 'string' && found.handle.trim() !== '',
                 enabled: typeof found.enabled === 'boolean' ? found.enabled : def.enabled,
                 date: /^\d{4}-\d{2}-\d{2}$/.test(found.date || '') ? found.date : def.date,
                 time: /^\d{2}:\d{2}$/.test(found.time || '') ? found.time : def.time
@@ -1253,23 +1299,35 @@
         <button
           type="button"
           role="switch"
-          aria-checked="${plat.enabled}"
+          aria-checked="${isActive(plat)}"
           aria-label="Aktifkan ${escapeHtml(plat.name)}"
           onclick="togglePlatformSwitch(${idx})"
-          class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${plat.enabled ? 'bg-[#2563EB]' : 'bg-[#2F3640]'}"
+          class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive(plat) ? 'bg-[#2563EB]' : 'bg-[#2F3640]'}"
         >
-          <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${plat.enabled ? 'translate-x-5' : 'translate-x-0'}"></span>
+          <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${isActive(plat) ? 'translate-x-5' : 'translate-x-0'}"></span>
         </button>`;
     }
 
     function renderPlatformCards() {
       const profile = getCurrentProfile();
       const container = document.getElementById('platformCardsList');
-      const activeTotal = profile.platforms.filter(p => p.enabled).length;
-      document.getElementById('enabledPlatformsSummary').textContent = `${activeTotal} / ${profile.platforms.length} akaun aktif`;
+      const activeTotal = profile.platforms.filter(isActive).length;
+      const connectedTotal = profile.platforms.filter(p => p.connected).length;
+      document.getElementById('enabledPlatformsSummary').textContent = `${connectedTotal} / ${profile.platforms.length} disambung • ${activeTotal} aktif`;
 
       container.innerHTML = profile.platforms.map((plat, idx) => {
-        const cardShell = `rounded-xl bg-[#22272F] border ${plat.enabled ? 'border-[#2F3640]' : 'border-[#2F3640]/50 opacity-65'} p-3 transition`;
+        const cardShell = `rounded-xl bg-[#22272F] border ${isActive(plat) ? 'border-[#2F3640]' : 'border-[#2F3640]/50 opacity-65'} p-3 transition`;
+        const accountLine = plat.connected
+          ? `<div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+               <input type="text" value="${escapeHtml(plat.handle)}" aria-label="Nama akaun ${escapeHtml(plat.name)}" onchange="updateHandle(${idx}, this.value)"
+                 class="flex-1 min-w-0 bg-transparent text-xs text-[#9CA3AF] hover:text-[#F3F4F6] focus:text-[#3B82F6] focus:outline-none truncate border-b border-transparent focus:border-[#2563EB]" />
+               <button type="button" onclick="disconnectPlatform(${idx})" class="text-[10px] text-[#9CA3AF] hover:text-rose-400 shrink-0 cursor-pointer">Putus</button>
+             </div>`
+          : `<div class="flex items-center gap-2 mt-0.5">
+               <span class="text-xs text-[#9CA3AF]/70 italic whitespace-nowrap">Belum disambung</span>
+               <button type="button" onclick="openConnectModal(${idx})" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">Sambung</button>
+             </div>`;
 
         if (leftTabState === 'schedule') {
           return `
@@ -1279,7 +1337,7 @@
                   ${renderPlatformIcon(plat.id)}
                   <div class="min-w-0">
                     <div class="text-sm font-semibold text-[#F3F4F6] truncate leading-tight">${escapeHtml(plat.name)}</div>
-                    <div class="text-[11px] text-[#3B82F6] truncate">${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}</div>
+                    <div class="text-[11px] ${plat.connected ? 'text-[#3B82F6]' : 'text-[#9CA3AF]/70'} truncate">${plat.connected ? escapeHtml(plat.handle) : 'Belum disambung'} • ${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}</div>
                   </div>
                 </div>
                 ${renderSwitch(plat, idx)}
@@ -1307,13 +1365,7 @@
                 ${renderPlatformIcon(plat.id)}
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-semibold text-[#F3F4F6] truncate leading-tight">${escapeHtml(plat.name)}</div>
-                  <input
-                    type="text"
-                    value="${escapeHtml(plat.handle)}"
-                    aria-label="Akaun ${escapeHtml(plat.name)}"
-                    onchange="updateHandle(${idx}, this.value)"
-                    class="w-full bg-transparent text-xs text-[#9CA3AF] hover:text-[#F3F4F6] focus:text-[#3B82F6] focus:outline-none truncate mt-0.5 border-b border-transparent focus:border-[#2563EB]"
-                  />
+                  ${accountLine}
                 </div>
               </div>
 
@@ -1340,7 +1392,12 @@
     }
     function togglePlatformSwitch(idx) {
       const profile = getCurrentProfile();
-      profile.platforms[idx].enabled = !profile.platforms[idx].enabled;
+      const plat = profile.platforms[idx];
+      if (!plat.connected) {
+        openConnectModal(idx);
+        return;
+      }
+      plat.enabled = !plat.enabled;
       persistState();
       renderPlatformCards();
       renderLivePhonePreview();
@@ -1349,9 +1406,68 @@
 
     function updateHandle(idx, val) {
       const profile = getCurrentProfile();
-      profile.platforms[idx].handle = val.trim() || profile.name;
+      const clean = String(val || '').trim();
+      if (!clean) {
+        renderPlatformCards();
+        return;
+      }
+      profile.platforms[idx].handle = clean;
       persistState();
       renderLivePhonePreview();
+    }
+
+    let connectModalIdx = null;
+
+    function openConnectModal(idx) {
+      const profile = getCurrentProfile();
+      const plat = profile.platforms[idx];
+      if (!plat) return;
+      connectModalIdx = idx;
+      document.getElementById('connectModalTitle').textContent = `Sambung ${plat.name}`;
+      document.getElementById('connectModalProfile').textContent = profile.name;
+      document.getElementById('connectModalIcon').innerHTML = renderPlatformIcon(plat.id);
+      const input = document.getElementById('connectModalHandle');
+      input.value = plat.handle || suggestHandle(plat.id, profile.name);
+      document.getElementById('connectModal').classList.remove('hidden');
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    }
+
+    function closeConnectModal() {
+      connectModalIdx = null;
+      document.getElementById('connectModal').classList.add('hidden');
+    }
+
+    function confirmConnectPlatform() {
+      const profile = getCurrentProfile();
+      const plat = profile.platforms[connectModalIdx];
+      if (!plat) return closeConnectModal();
+      const input = document.getElementById('connectModalHandle');
+      const handle = input.value.trim();
+      if (!handle) {
+        showToast('Sila masukkan nama akaun.', 'warning');
+        input.focus();
+        return;
+      }
+      plat.handle = handle;
+      plat.connected = true;
+      plat.enabled = true;
+      persistState();
+      closeConnectModal();
+      renderPlatformCards();
+      renderLivePhonePreview();
+      showToast(`${plat.name} disambung sebagai ${handle}`, 'success');
+    }
+
+    function disconnectPlatform(idx) {
+      const profile = getCurrentProfile();
+      const plat = profile.platforms[idx];
+      if (!plat) return;
+      plat.connected = false;
+      plat.handle = '';
+      persistState();
+      renderPlatformCards();
+      renderLivePhonePreview();
+      showToast(`${plat.name} diputuskan daripada ${profile.name}.`, 'info');
     }
 
     function updatePlatformDate(idx, newDate) {
@@ -1374,9 +1490,9 @@
 
     function applyAutoStagger30m() {
       const profile = getCurrentProfile();
-      const activeList = profile.platforms.filter(p => p.enabled);
+      const activeList = profile.platforms.filter(isActive);
       if (activeList.length === 0) {
-        showToast('Aktifkan sekurang-kurangnya satu platform.', 'warning');
+        showToast('Sambung & aktifkan sekurang-kurangnya satu platform.', 'warning');
         return;
       }
 
@@ -1750,7 +1866,7 @@
       const profile = getCurrentProfile();
       const tab = state.previewTab;
       const plat = profile.platforms.find(p => p.id === tab) || profile.platforms[0];
-      const handle = plat ? plat.handle : `@${profile.name}`;
+      const handle = displayHandle(plat);
       const scheduleStr = plat ? `${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}` : '24/11/2026 • 08:00 PM';
 
       const titleText = state.draftTitle.trim() || 'Tajuk hantaran dipaparkan di sini';
@@ -1946,10 +2062,10 @@
      */
     function openPrePostModal() {
       const profile = getCurrentProfile();
-      const enabled = profile.platforms.filter(p => p.enabled);
+      const enabled = profile.platforms.filter(isActive);
 
       if (enabled.length === 0) {
-        showToast('Aktifkan sekurang-kurangnya satu platform di lajur kiri.', 'warning');
+        showToast('Sambung & aktifkan sekurang-kurangnya satu platform di lajur kiri.', 'warning');
         return;
       }
 
@@ -1970,7 +2086,7 @@
 
     function renderPrePostModal() {
       const profile = getCurrentProfile();
-      const enabled = profile.platforms.filter(p => p.enabled);
+      const enabled = profile.platforms.filter(isActive);
       const qInfo = QUALITY_MAP[state.videoQuality] || QUALITY_MAP['1080p'];
 
       const avatar = document.getElementById('confirmProfileAvatar');
@@ -2008,7 +2124,7 @@
               ${renderPlatformIcon(plat.id)}
               <div class="min-w-0">
                 <div class="text-xs font-semibold text-[#F3F4F6] truncate">${escapeHtml(plat.name)}</div>
-                <div class="text-[11px] text-[#9CA3AF] truncate">${escapeHtml(plat.handle)}</div>
+                <div class="text-[11px] text-[#9CA3AF] truncate">${escapeHtml(displayHandle(plat))}</div>
               </div>
             </div>
             <div class="text-right shrink-0">
@@ -2030,7 +2146,7 @@
       previewFrame.innerHTML = `
         <div class="relative w-full h-full rounded-[22px] bg-[#16191D] overflow-hidden flex flex-col justify-between text-white">
           <div class="relative z-20 flex items-center justify-between px-3 pt-2 pb-1 text-[9px] font-semibold bg-black/50">
-            <span class="truncate">${escapeHtml(activePlat.handle)}</span>
+            <span class="truncate">${escapeHtml(displayHandle(activePlat))}</span>
             <span class="px-1.5 py-0.2 rounded bg-[#2563EB] text-white font-bold shrink-0">${escapeHtml(qInfo.badge)}</span>
           </div>
 
@@ -2058,7 +2174,7 @@
 
     function confirmScheduleNow() {
       const profile = getCurrentProfile();
-      const enabled = profile.platforms.filter(p => p.enabled);
+      const enabled = profile.platforms.filter(isActive);
       if (enabled.length === 0) return;
 
       const qInfo = QUALITY_MAP[state.videoQuality] || QUALITY_MAP['1080p'];
