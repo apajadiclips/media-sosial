@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="ms" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#16191D" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Media Sosial Sender" />
+  <meta name="description" content="Media Sosial Sender — Aplikasi PWA sebaran & penjadualan hantaran merentas YouTube Shorts, Facebook, Instagram dan Threads tanpa langganan." />
+  <title>Media Sosial Sender • PWA</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (window.tailwind) tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            charcoal: {
+              bg: '#16191D',
+              panel: '#1D2127',
+              card: '#22272F',
+              hover: '#2A303A',
+              border: '#2F3640',
+            },
+            electric: {
+              DEFAULT: '#2563EB',
+              light: '#3B82F6',
+              dark: '#1D4ED8',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Subtle scrollbars tailored for long-session work */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #16191D;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2F3640;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2563EB;
+    }
+
+    /* Ambient glow animation for placeholder video canvas */
+    @keyframes ambientDrift {
+      0%, 100% {
+        opacity: 0.45;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.08);
+      }
+    }
+    .ambient-drift {
+      animation: ambientDrift 6s ease-in-out infinite;
+    }
+
+    /* Native date & time picker indicator styling */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.82);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-[#16191D] text-[#F3F4F6] font-sans antialiased selection:bg-[#2563EB] selection:text-white min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- ===================================================================== -->
+  <!-- 1. TOP HEADER BAR                                                     -->
+  <!-- ===================================================================== -->
+  <header class="sticky top-0 z-30 bg-[#16191D]/95 backdrop-blur-md border-b border-[#2F3640] px-3 sm:px-5 lg:px-6 py-2.5">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Left: Brand Identity & Active Quality Status -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-[#2563EB] flex items-center justify-center shadow-lg shadow-[#2563EB]/25 shrink-0">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 2L11 13" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-sm sm:text-base font-semibold tracking-tight text-[#F3F4F6] truncate">Media Sosial Sender</h1>
+            <span id="headerQualityBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#1D2127] text-[#3B82F6] border border-[#2F3640]">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#3B82F6]"></span>
+              1080p Auto / Lalai
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Multi-Device Sync (Export/Import JSON), Scheduled Queue & PWA Install -->
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <!-- Export JSON Sync -->
+        <button
+          type="button"
+          onclick="exportSyncJson()"
+          title="Eksport tetapan profil, jadual & hashtag (JSON) untuk Telefon, Tablet & Web"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#1D2127] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] transition cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5 text-[#3B82F6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span class="hidden md:inline">Export JSON</span>
+        </button>
+
+        <!-- Import JSON Sync -->
+        <label
+          title="Import fail JSON dari peranti lain"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#1D2127] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] transition cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span class="hidden md:inline">Import JSON</span>
+          <input id="headerImportJsonInput" type="file" accept="application/json" class="hidden" onchange="importSyncJson(event)" />
+        </label>
+
+        <!-- Scheduled Queue Button -->
+        <button
+          type="button"
+          onclick="openQueueModal()"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#1D2127] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] transition cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5 text-[#3B82F6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span class="hidden sm:inline">Jadual</span>
+          <span id="queueBadgeCount" class="px-1.5 py-0.2 rounded-md bg-[#2563EB] text-white text-[11px] font-semibold">0</span>
+        </button>
+
+        <!-- PWA Install / Add to Home Screen Button -->
+        <button
+          type="button"
+          onclick="handlePwaInstallClick()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-sm shadow-[#2563EB]/30 transition cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+          </svg>
+          <span>Pasang PWA</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 2. MOBILE & TABLET NAVIGATION BAR (< 1024px)                        -->
+    <!-- ===================================================================== -->
+    <nav aria-label="Navigasi Lajur Mudah Alih & Tablet" class="lg:hidden mt-2.5 pt-2 border-t border-[#2F3640] grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+      <button
+        type="button"
+        data-nav-view="col1"
+        onclick="selectMobileView('col1')"
+        class="mobile-nav-btn py-2 px-2 rounded-xl text-xs font-semibold text-center transition cursor-pointer bg-[#2563EB] text-white shadow-sm"
+      >
+        1. Akaun &amp; Jadual
+      </button>
+      <button
+        type="button"
+        data-nav-view="col2"
+        onclick="selectMobileView('col2')"
+        class="mobile-nav-btn py-2 px-2 rounded-xl text-xs font-medium text-center transition cursor-pointer bg-[#1D2127] text-[#9CA3AF] hover:text-[#F3F4F6]"
+      >
+        2. Draf Hantaran
+      </button>
+      <button
+        type="button"
+        data-nav-view="col3"
+        onclick="selectMobileView('col3')"
+        class="mobile-nav-btn py-2 px-2 rounded-xl text-xs font-medium text-center transition cursor-pointer bg-[#1D2127] text-[#9CA3AF] hover:text-[#F3F4F6]"
+      >
+        3. Live Preview
+      </button>
+      <button
+        type="button"
+        data-nav-view="all"
+        onclick="selectMobileView('all')"
+        class="mobile-nav-btn py-2 px-2 rounded-xl text-xs font-medium text-center transition cursor-pointer bg-[#1D2127] text-[#9CA3AF] hover:text-[#F3F4F6]"
+      >
+        Semua Lajur
+      </button>
+    </nav>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN 3-COLUMN WORKSPACE (>= 1024px: 12-Col Grid, 4 + 4 + 4)            -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+
+      <!-- ================================================================= -->
+      <!-- 3. LEFT COLUMN: PROFILES & CONNECTED ACCOUNTS                     -->
+      <!-- ================================================================= -->
+      <section id="col1" class="lg:col-span-4 bg-[#1D2127] border border-[#2F3640] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl">
+        <div>
+          <h2 class="text-lg sm:text-xl font-semibold text-[#F3F4F6] tracking-tight mb-4">
+            Profiles &amp; Connected Accounts
+          </h2>
+
+          <!-- Profile Switcher Dropdown -->
+          <div class="relative mb-3" id="profileDropdownWrapper">
+            <button
+              id="profileDropdownTrigger"
+              type="button"
+              onclick="toggleProfileDropdown()"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              class="w-full flex items-center justify-between bg-[#22272F] hover:bg-[#2A303A] border border-[#2F3640] focus:border-[#2563EB] rounded-xl px-3.5 py-2.5 transition cursor-pointer"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <div id="activeProfileAvatar" class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2563EB] to-[#60A5FA] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow">
+                  AC
+                </div>
+                <span id="activeProfileLabel" class="text-sm font-medium text-[#F3F4F6] truncate">apajadiclips</span>
+              </div>
+              <svg id="profileDropdownArrow" class="w-4 h-4 text-[#9CA3AF] transition-transform duration-200 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            <!-- Dropdown Options -->
+            <div
+              id="profileDropdownMenu"
+              role="listbox"
+              class="hidden absolute left-0 right-0 mt-1.5 bg-[#22272F] border border-[#2F3640] rounded-xl shadow-2xl z-20 overflow-hidden divide-y divide-[#2F3640]"
+            >
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- "+ Add Profile" Button (Opens Add Profile Modal) -->
+          <button
+            type="button"
+            onclick="openAddProfileModal()"
+            class="w-full py-2.5 px-4 rounded-xl bg-[#22272F] hover:bg-[#2A303A] border border-[#2F3640] text-sm font-medium text-[#F3F4F6] flex items-center justify-center gap-2 transition cursor-pointer mb-4"
+          >
+            <svg class="w-4 h-4 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>+ Add Profile</span>
+          </button>
+
+          <!-- Tabs: Connected Accounts | Staggered Schedule + "+30m Auto" -->
+          <div class="flex items-center justify-between gap-2 mb-3 pt-1">
+            <div role="tablist" aria-label="Akaun & Jadual" class="flex-1 grid grid-cols-2 bg-[#22272F] p-1 rounded-xl border border-[#2F3640]">
+              <button type="button" role="tab" data-left-tab="accounts" onclick="selectLeftTab('accounts')" class="left-tab py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer">Connected Accounts</button>
+              <button type="button" role="tab" data-left-tab="schedule" onclick="selectLeftTab('schedule')" class="left-tab py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer">Staggered Schedule</button>
+            </div>
+            <button
+              type="button"
+              onclick="applyAutoStagger30m()"
+              title="Jarakan masa siaran secara automatik (+30 minit setiap platform aktif)"
+              class="shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[#2563EB]/20 hover:bg-[#2563EB]/35 text-[#3B82F6] border border-[#2563EB]/40 transition cursor-pointer"
+            >
+              +30m Auto
+            </button>
+          </div>
+
+          <!-- Platform Cards Container -->
+          <div id="platformCardsList" class="space-y-2.5">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Bottom Status Footer -->
+        <div class="mt-4 pt-3 border-t border-[#2F3640] flex items-center justify-between text-xs text-[#9CA3AF]">
+          <span id="enabledPlatformsSummary">4 / 4 akaun aktif</span>
+          <span class="text-[#3B82F6] font-medium">Storan setempat aktif</span>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- 4. CENTER COLUMN: NEW POST                                        -->
+      <!-- ================================================================= -->
+      <section id="col2" class="lg:col-span-4 bg-[#1D2127] border border-[#2F3640] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl">
+        <div class="space-y-4">
+          <!-- Header & Aspect Ratio Switch (9:16 / 16:9) -->
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg sm:text-xl font-semibold text-[#F3F4F6] tracking-tight">New Post</h2>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-[#9CA3AF]">Aspect Ratio</span>
+              <span id="labelRatio916" class="text-xs font-semibold text-[#F3F4F6] transition">9:16</span>
+              <button
+                id="aspectRatioSwitch"
+                type="button"
+                role="switch"
+                aria-checked="false"
+                aria-label="Tukar nisbah aspek antara 9:16 dan 16:9"
+                onclick="toggleAspectRatio()"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[#2F3640] transition-colors duration-200 ease-in-out focus:outline-none"
+              >
+                <span
+                  id="aspectRatioThumb"
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out translate-x-0"
+                ></span>
+              </button>
+              <span id="labelRatio169" class="text-xs font-medium text-[#9CA3AF] transition">16:9</span>
+            </div>
+          </div>
+
+          <!-- Drag-and-Drop / File Picker Video Upload Box -->
+          <div
+            id="videoDropArea"
+            onclick="document.getElementById('videoUploadInput').click()"
+            class="relative group rounded-xl border-2 border-dashed border-[#2F3640] hover:border-[#2563EB] bg-[#22272F]/75 hover:bg-[#22272F] p-4 sm:p-5 text-center transition cursor-pointer"
+          >
+            <input
+              id="videoUploadInput"
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,video/*"
+              class="hidden"
+              onchange="handleVideoUploadChange(event)"
+            />
+
+            <!-- Empty Upload Prompt -->
+            <div id="videoUploadEmpty" class="flex flex-col items-center justify-center space-y-2.5 py-1.5">
+              <div class="w-10 h-10 rounded-xl bg-[#1D2127] border border-[#2F3640] group-hover:border-[#2563EB]/60 flex items-center justify-center text-[#9CA3AF] group-hover:text-[#3B82F6] transition">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </div>
+              <p class="text-sm font-medium text-[#F3F4F6]">Drag-and-drop video upload</p>
+
+              <!-- Quality Selector Pill (360p Min to 2K Max, 1080p Auto / Lalai default) -->
+              <div onclick="event.stopPropagation()" class="inline-flex items-center bg-[#2563EB] hover:bg-[#1D4ED8] rounded-full px-3 py-1 shadow-sm shadow-[#2563EB]/30 transition">
+                <svg class="w-3.5 h-3.5 text-white mr-1.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                <select
+                  id="qualitySelectEmpty"
+                  aria-label="Pilih Kualiti Video (360p Min hingga 2K Max, Lalai 1080p Auto)"
+                  onchange="setVideoQuality(this.value)"
+                  class="bg-transparent text-white text-xs font-medium focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="360p" class="bg-[#1D2127] text-[#F3F4F6]">360p (Min)</option>
+                  <option value="480p" class="bg-[#1D2127] text-[#F3F4F6]">480p (SD)</option>
+                  <option value="720p" class="bg-[#1D2127] text-[#F3F4F6]">720p (HD)</option>
+                  <option value="1080p" selected class="bg-[#1D2127] text-[#F3F4F6]">1080p (Auto / Lalai)</option>
+                  <option value="2K" class="bg-[#1D2127] text-[#F3F4F6]">2K (Max)</option>
+                </select>
+              </div>
+
+              <p class="text-[11px] text-[#9CA3AF]">MP4, MOV atau WebM • Min 360p • Lalai 1080p Auto • Max 2K</p>
+            </div>
+
+            <!-- Uploaded Video Info State -->
+            <div id="videoUploadLoaded" class="hidden flex-col items-center justify-center space-y-2 py-1">
+              <div class="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Video Dimuatkan untuk Pratonton</span>
+              </div>
+              <p id="uploadedVideoTitle" class="text-sm font-medium text-[#F3F4F6] truncate max-w-full px-2">video_klip.mp4</p>
+              <div class="flex flex-wrap items-center justify-center gap-1.5">
+                <span id="uploadedVideoSizeBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#16191D] text-[#9CA3AF] border border-[#2F3640]">0 MB</span>
+                <div onclick="event.stopPropagation()" class="inline-flex items-center bg-[#2563EB] hover:bg-[#1D4ED8] rounded-full px-2.5 py-0.5 transition">
+                  <select
+                    id="qualitySelectLoaded"
+                    aria-label="Tukar Kualiti Video"
+                    onchange="setVideoQuality(this.value)"
+                    class="bg-transparent text-white text-[11px] font-medium focus:outline-none cursor-pointer"
+                  >
+                    <option value="360p" class="bg-[#1D2127] text-[#F3F4F6]">360p (Min)</option>
+                    <option value="480p" class="bg-[#1D2127] text-[#F3F4F6]">480p (SD)</option>
+                    <option value="720p" class="bg-[#1D2127] text-[#F3F4F6]">720p (HD)</option>
+                    <option value="1080p" selected class="bg-[#1D2127] text-[#F3F4F6]">1080p (Auto / Lalai)</option>
+                    <option value="2K" class="bg-[#1D2127] text-[#F3F4F6]">2K (Max)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="pt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onclick="event.stopPropagation(); document.getElementById('videoUploadInput').click();"
+                  class="px-3 py-1 rounded-lg text-xs font-medium bg-[#1D2127] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640]"
+                >
+                  Tukar Video
+                </button>
+                <button
+                  type="button"
+                  onclick="event.stopPropagation(); removeUploadedVideo();"
+                  class="px-3 py-1 rounded-lg text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30"
+                >
+                  Buang
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- "+ Upload Thumbnail" Button -->
+          <div>
+            <input
+              id="thumbnailUploadInput"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden"
+              onchange="handleThumbnailUploadChange(event)"
+            />
+            <button
+              type="button"
+              onclick="document.getElementById('thumbnailUploadInput').click()"
+              class="w-full py-2.5 px-4 rounded-xl bg-[#22272F] hover:bg-[#2A303A] border border-[#2F3640] text-sm font-medium text-[#F3F4F6] flex items-center justify-center gap-2 transition cursor-pointer"
+            >
+              <svg class="w-4 h-4 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>+ Upload Thumbnail</span>
+            </button>
+
+            <!-- Thumbnail Attached Chip -->
+            <div id="thumbnailAttachedBar" class="hidden mt-2 flex items-center justify-between bg-[#22272F] border border-[#2F3640] rounded-xl px-3 py-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <img id="thumbnailThumbImg" src="" alt="Thumbnail" class="w-8 h-8 rounded-lg object-cover border border-[#2F3640] shrink-0" />
+                <div class="truncate">
+                  <p id="thumbnailAttachedName" class="text-xs font-medium text-[#F3F4F6] truncate">thumbnail.jpg</p>
+                  <p class="text-[11px] text-[#3B82F6]">Thumbnail aktif pada pratonton</p>
+                </div>
+              </div>
+              <button type="button" onclick="removeUploadedThumbnail()" class="text-xs text-[#9CA3AF] hover:text-rose-400 px-2 py-1 rounded cursor-pointer">Buang</button>
+            </div>
+          </div>
+
+          <!-- Title Field -->
+          <div>
+            <label for="postTitleField" class="block text-xs font-medium text-[#F3F4F6] mb-1.5">Title</label>
+            <input
+              id="postTitleField"
+              type="text"
+              placeholder="Add a title..."
+              oninput="handleDraftChange()"
+              class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6] placeholder-[#9CA3AF]/60 transition"
+            />
+          </div>
+
+          <!-- Main Caption Field -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="postCaptionField" class="text-xs font-medium text-[#F3F4F6]">Main Caption</label>
+              <span id="captionLengthLabel" class="text-[11px] text-[#9CA3AF]">0 / 2,200</span>
+            </div>
+            <textarea
+              id="postCaptionField"
+              rows="4"
+              maxlength="2200"
+              placeholder="Main caption description..."
+              oninput="handleDraftChange()"
+              class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6] placeholder-[#9CA3AF]/60 resize-none transition leading-relaxed"
+            ></textarea>
+          </div>
+
+          <!-- Saved Hashtag Snippets -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-medium text-[#F3F4F6]">Saved hashtag snippets</span>
+              <span class="text-[11px] text-[#9CA3AF]">Klik tag untuk tambah ke kapsyen</span>
+            </div>
+            <div class="bg-[#22272F] border border-[#2F3640] rounded-xl p-2.5">
+              <div id="hashtagChipsBox" class="flex flex-wrap gap-1.5 items-center">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- 5. RIGHT COLUMN: LIVE PREVIEW                                     -->
+      <!-- ================================================================= -->
+      <section id="col3" class="lg:col-span-4 bg-[#1D2127] border border-[#2F3640] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl">
+        <div class="flex flex-col items-center">
+          <!-- Header & Aspect Ratio Pill -->
+          <div class="w-full flex items-center justify-between mb-3">
+            <h2 class="text-lg sm:text-xl font-semibold text-[#F3F4F6] tracking-tight">Live Preview</h2>
+            <span id="livePreviewRatioTag" class="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#22272F] text-[#9CA3AF] border border-[#2F3640]">9:16</span>
+          </div>
+
+          <!-- Platform Tabs: YT Shorts | FB | IG | Threads -->
+          <div role="tablist" aria-label="Tab Pratonton Platform" class="w-full grid grid-cols-4 bg-[#22272F] p-1 rounded-xl border border-[#2F3640] mb-4">
+            <button
+              type="button"
+              role="tab"
+              data-platform-tab="yt"
+              onclick="selectPreviewTab('yt')"
+              class="platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer bg-[#2A303A] text-[#F3F4F6] border-b-2 border-[#3B82F6]"
+            >
+              YT Shorts
+            </button>
+            <button
+              type="button"
+              role="tab"
+              data-platform-tab="fb"
+              onclick="selectPreviewTab('fb')"
+              class="platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer text-[#9CA3AF] hover:text-[#F3F4F6]"
+            >
+              FB
+            </button>
+            <button
+              type="button"
+              role="tab"
+              data-platform-tab="ig"
+              onclick="selectPreviewTab('ig')"
+              class="platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer text-[#9CA3AF] hover:text-[#F3F4F6]"
+            >
+              IG
+            </button>
+            <button
+              type="button"
+              role="tab"
+              data-platform-tab="threads"
+              onclick="selectPreviewTab('threads')"
+              class="platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer text-[#9CA3AF] hover:text-[#F3F4F6]"
+            >
+              Threads
+            </button>
+          </div>
+
+          <!-- Realistic Smartphone Frame -->
+          <div class="relative w-[264px] sm:w-[276px] h-[512px] rounded-[38px] bg-[#0D1014] p-[9px] border-2 border-[#323944] shadow-2xl shadow-black/75 select-none">
+            <!-- Top Speaker / Notch Bar -->
+            <div class="absolute top-3.5 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-full z-20 flex items-center justify-end px-2">
+              <span class="w-2 h-2 rounded-full bg-[#1b2436] border border-[#2c3b57]"></span>
+            </div>
+
+            <!-- Phone Display Content -->
+            <div id="phonePreviewViewport" class="relative w-full h-full rounded-[30px] bg-[#16191D] overflow-hidden flex flex-col justify-between">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Step Guide Text & Primary Electric Blue CTA Button -->
+        <div class="mt-4 pt-2 space-y-3">
+          <p class="text-[11px] text-center text-[#9CA3AF] leading-relaxed">
+            Step 1: Select Profiles -&gt; Step 2: Upload &amp; Set Staggered Times -&gt; Step 3: Preview &amp; Schedule All
+          </p>
+          <button
+            type="button"
+            onclick="openPrePostModal()"
+            class="w-full py-3 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-[0.99] text-white font-semibold text-sm shadow-lg shadow-[#2563EB]/30 transition cursor-pointer flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>Schedule All Posts</span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL A: ADD NEW PROFILE                                              -->
+  <!-- ===================================================================== -->
+  <div id="addProfileModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-semibold text-[#F3F4F6]">+ Add Profile</h3>
+          <p class="text-xs text-[#9CA3AF]">Cipta profil baharu dengan set akaun &amp; jadual sendiri</p>
+        </div>
+        <button type="button" onclick="closeAddProfileModal()" class="p-2 rounded-xl bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white cursor-pointer">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label for="modalNewProfileName" class="block text-xs font-medium text-[#F3F4F6] mb-1">Nama Profil</label>
+          <input
+            id="modalNewProfileName"
+            type="text"
+            placeholder="cth: klipviralhq"
+            onkeydown="if(event.key==='Enter') createNewProfileFromModal()"
+            class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6] placeholder-[#9CA3AF]/60"
+          />
+        </div>
+
+        <div>
+          <span class="block text-xs font-medium text-[#F3F4F6] mb-1.5">Tona Lencana Profil</span>
+          <div class="flex items-center gap-2.5" id="profileGradientSwatches">
+            <button type="button" data-grad="from-[#2563EB] to-[#60A5FA]" onclick="pickProfileGradient(this)" class="grad-swatch w-7 h-7 rounded-full bg-gradient-to-tr from-[#2563EB] to-[#60A5FA] ring-2 ring-white cursor-pointer"></button>
+            <button type="button" data-grad="from-emerald-500 to-teal-400" onclick="pickProfileGradient(this)" class="grad-swatch w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 opacity-75 hover:opacity-100 cursor-pointer"></button>
+            <button type="button" data-grad="from-amber-500 to-orange-500" onclick="pickProfileGradient(this)" class="grad-swatch w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 opacity-75 hover:opacity-100 cursor-pointer"></button>
+            <button type="button" data-grad="from-cyan-500 to-blue-600" onclick="pickProfileGradient(this)" class="grad-swatch w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 opacity-75 hover:opacity-100 cursor-pointer"></button>
+            <button type="button" data-grad="from-indigo-500 to-sky-500" onclick="pickProfileGradient(this)" class="grad-swatch w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-500 opacity-75 hover:opacity-100 cursor-pointer"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeAddProfileModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white border border-[#2F3640] cursor-pointer">Batal</button>
+        <button type="button" onclick="createNewProfileFromModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">Simpan Profil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL B: PRE-POSTING PREVIEW & CONFIRMATION MODAL                      -->
+  <!-- ===================================================================== -->
+  <div id="prePostConfirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-[#2F3640] flex items-center justify-between gap-3 bg-[#16191D]/70">
+        <div>
+          <h3 class="text-base sm:text-lg font-semibold text-[#F3F4F6]">Pratonton &amp; Pengesahan Sebelum Siaran</h3>
+          <p class="text-xs text-[#9CA3AF]">Semak pratonton setiap platform aktif, kualiti video &amp; jadual berperingkat sebelum menghantar</p>
+        </div>
+        <button type="button" onclick="closePrePostModal()" class="p-2 rounded-xl bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white cursor-pointer shrink-0">✕</button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-12 gap-5">
+        <!-- Left: Profile, Quality, Aspect Ratio, Caption & Platform Schedule Selector (7 cols) -->
+        <div class="md:col-span-7 space-y-4">
+          <div class="bg-[#22272F] border border-[#2F3640] rounded-xl p-3.5 space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div id="confirmProfileAvatar" class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2563EB] to-[#60A5FA] flex items-center justify-center text-white text-xs font-bold shrink-0">AC</div>
+                <div class="min-w-0">
+                  <span class="text-[11px] text-[#9CA3AF] block">Profil</span>
+                  <span id="confirmProfileName" class="text-sm font-semibold text-[#F3F4F6] truncate block">apajadiclips</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span id="confirmQualityPill" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#2563EB] text-white">1080p (Auto / Lalai)</span>
+                <span id="confirmAspectPill" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#1D2127] text-[#F3F4F6] border border-[#2F3640]">9:16</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[#2F3640] text-xs">
+              <div class="bg-[#1D2127] rounded-lg px-3 py-2 border border-[#2F3640]">
+                <span class="text-[10px] text-[#9CA3AF] block">Fail Video</span>
+                <span id="confirmVideoFileText" class="font-medium text-[#F3F4F6] truncate block mt-0.5">Tiada fail video</span>
+              </div>
+              <div class="bg-[#1D2127] rounded-lg px-3 py-2 border border-[#2F3640]">
+                <span class="text-[10px] text-[#9CA3AF] block">Thumbnail</span>
+                <span id="confirmThumbFileText" class="font-medium text-[#F3F4F6] truncate block mt-0.5">Bingkai lalai</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Title & Caption Review -->
+          <div class="bg-[#22272F] border border-[#2F3640] rounded-xl p-3.5 space-y-2">
+            <div>
+              <span class="text-[11px] text-[#9CA3AF]">Tajuk Hantaran:</span>
+              <p id="confirmTitleText" class="text-sm font-semibold text-[#F3F4F6] mt-0.5">(Tiada Tajuk)</p>
+            </div>
+            <div class="pt-1">
+              <span class="text-[11px] text-[#9CA3AF]">Kapsyen:</span>
+              <p id="confirmCaptionText" class="text-xs text-[#F3F4F6]/90 whitespace-pre-line bg-[#1D2127] border border-[#2F3640] rounded-lg p-2.5 mt-1 max-h-24 overflow-y-auto leading-relaxed">(Tiada Kapsyen)</p>
+            </div>
+          </div>
+
+          <!-- Platform Schedule Cards (Click to Inspect Each Platform Preview) -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[#F3F4F6]">Jadual Platform Aktif (Klik untuk semak pratonton)</span>
+              <span id="confirmActiveCount" class="text-[11px] text-[#3B82F6] font-medium">4 platform</span>
+            </div>
+            <div id="confirmPlatformCards" class="space-y-2">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Selected Platform Visual Preview Card (5 cols) -->
+        <div class="md:col-span-5 flex flex-col items-center justify-between bg-[#16191D] border border-[#2F3640] rounded-2xl p-3.5">
+          <div class="w-full flex items-center justify-between gap-2 mb-2">
+            <span id="confirmPreviewPlatformHeading" class="text-xs font-semibold text-[#F3F4F6] truncate">YouTube Shorts</span>
+            <span id="confirmPreviewScheduleBadge" class="text-[10px] font-medium text-[#3B82F6] bg-[#2563EB]/15 px-2 py-0.5 rounded-full shrink-0">24/11/2026 • 08:00 PM</span>
+          </div>
+
+          <div id="confirmPreviewCardFrame" class="w-full max-w-[235px] h-[350px] rounded-[28px] bg-[#0D1014] p-[7px] border border-[#323944] shadow-xl overflow-hidden">
+            <!-- Populated dynamically -->
+          </div>
+
+          <p class="text-[11px] text-[#9CA3AF] text-center mt-2.5">
+            Pastikan pratonton &amp; masa siaran tepat sebelum mengesahkan.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer: Kembali Edit & Sahkan & Jadualkan Sekarang -->
+      <div class="px-5 py-3.5 border-t border-[#2F3640] bg-[#16191D]/80 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+        <button
+          type="button"
+          onclick="closePrePostModal()"
+          class="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] transition cursor-pointer"
+        >
+          Kembali Edit
+        </button>
+        <button
+          type="button"
+          onclick="confirmScheduleNow()"
+          class="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-lg shadow-[#2563EB]/30 transition cursor-pointer flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Sahkan &amp; Jadualkan Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL C: SCHEDULED QUEUE LIST                                         -->
+  <!-- ===================================================================== -->
+  <div id="queueModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-[#2F3640] flex items-center justify-between">
+        <div>
+          <h3 class="text-base sm:text-lg font-semibold text-[#F3F4F6]">Senarai Hantaran Dijadualkan</h3>
+          <p class="text-xs text-[#9CA3AF]">Rekod batch hantaran yang telah disahkan mengikut jadual berperingkat</p>
+        </div>
+        <button type="button" onclick="closeQueueModal()" class="p-2 rounded-xl bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-3" id="queueModalBody">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div class="px-5 py-3 border-t border-[#2F3640] bg-[#16191D]/60 flex items-center justify-between">
+        <button id="clearQueueButton" type="button" onclick="clearScheduledQueue()" class="hidden px-3 py-1.5 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-500/10 cursor-pointer">Kosongkan Senarai</button>
+        <button type="button" onclick="closeQueueModal()" class="ml-auto px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL D: PWA INSTALL / ADD TO HOME SCREEN GUIDE                       -->
+  <!-- ===================================================================== -->
+  <div id="pwaInstallModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-xs">PWA</div>
+          <div>
+            <h3 class="text-base font-semibold text-[#F3F4F6]">Pasang Media Sosial Sender</h3>
+            <p class="text-xs text-[#9CA3AF]">Gunakan sebagai aplikasi skrin penuh di Telefon, Tablet &amp; Web</p>
+          </div>
+        </div>
+        <button type="button" onclick="closePwaInstallModal()" class="p-2 rounded-xl bg-[#22272F] text-[#9CA3AF] hover:text-white cursor-pointer">✕</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs text-[#9CA3AF]">
+        <div class="p-3 rounded-xl bg-[#22272F] border border-[#2F3640]">
+          <p class="font-semibold text-[#F3F4F6] mb-1">Telefon &amp; Tablet Android (Chrome)</p>
+          <p>Ketik ikon menu <strong class="text-[#F3F4F6]">⋮</strong> di penjuru atas Chrome &rarr; pilih <strong class="text-[#3B82F6]">Add to Home screen</strong> atau <strong class="text-[#3B82F6]">Install app</strong>.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#22272F] border border-[#2F3640]">
+          <p class="font-semibold text-[#F3F4F6] mb-1">Web / Laptop (Chrome / Edge)</p>
+          <p>Klik ikon pasang aplikasi di bar alamat pelayar atau guna <strong class="text-[#3B82F6]">Export JSON / Import JSON</strong> di header atas untuk menyelaraskan profil &amp; jadual merentas semua peranti anda.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="deferredInstallPromptBtn" type="button" onclick="promptNativeInstall()" class="hidden px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">
+          Pasang Sekarang
+        </button>
+        <button type="button" onclick="closePwaInstallModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Container -->
+  <div id="toastBannerContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION JAVASCRIPT & DYNAMIC PWA MANIFEST                         -->
+  <!-- ===================================================================== -->
+  <script>
+    /**
+     * Inject Web App Manifest dynamically so the standalone HTML file
+     * qualifies as an installable PWA on Android, Tablet, and Desktop browsers.
+     */
+    (function setupPwaManifest() {
+      try {
+        // Render the app icon to PNG (Android Chrome requires raster 192/512 icons)
+        function renderIconPng(size) {
+          const c = document.createElement('canvas');
+          c.width = c.height = size;
+          const ctx = c.getContext('2d');
+          const k = size / 512;
+          ctx.fillStyle = '#16191D';
+          ctx.fillRect(0, 0, size, size);
+          ctx.fillStyle = '#2563EB';
+          const r = 116 * k, w = size;
+          ctx.beginPath();
+          ctx.moveTo(r, 0); ctx.arcTo(w, 0, w, w, r); ctx.arcTo(w, w, 0, w, r);
+          ctx.arcTo(0, w, 0, 0, r); ctx.arcTo(0, 0, w, 0, r); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 34 * k;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(396 * k, 116 * k); ctx.lineTo(228 * k, 284 * k);
+          ctx.moveTo(396 * k, 116 * k); ctx.lineTo(292 * k, 404 * k); ctx.lineTo(228 * k, 284 * k);
+          ctx.lineTo(108 * k, 220 * k); ctx.lineTo(396 * k, 116 * k);
+          ctx.stroke();
+          return c.toDataURL('image/png');
+        }
+
+        const icon192 = renderIconPng(192);
+        const icon512 = renderIconPng(512);
+        const baseUrl = new URL('./', location.href).href;
+
+        const manifestData = {
+          name: 'Media Sosial Sender',
+          short_name: 'MedSoc Sender',
+          description: 'Sebaran & penjadualan hantaran merentas YouTube Shorts, Facebook, Instagram dan Threads.',
+          id: baseUrl,
+          start_url: location.href.split('#')[0],
+          scope: baseUrl,
+          display: 'standalone',
+          orientation: 'any',
+          background_color: '#16191D',
+          theme_color: '#16191D',
+          icons: [
+            { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          ]
+        };
+
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData));
+        document.head.appendChild(manifestLink);
+
+        const touchIcon = document.createElement('link');
+        touchIcon.rel = 'apple-touch-icon';
+        touchIcon.href = icon192;
+        document.head.appendChild(touchIcon);
+
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.href = icon192;
+        document.head.appendChild(favicon);
+      } catch (err) {
+        console.warn('PWA setup notice:', err);
+      }
+    })();
+
+    let deferredInstallEvt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallEvt = e;
+      const btn = document.getElementById('deferredInstallPromptBtn');
+      if (btn) btn.classList.remove('hidden');
+    });
+
+    function handlePwaInstallClick() {
+      if (deferredInstallEvt) {
+        promptNativeInstall();
+      } else {
+        openPwaInstallModal();
+      }
+    }
+
+    async function promptNativeInstall() {
+      if (!deferredInstallEvt) {
+        openPwaInstallModal();
+        return;
+      }
+      deferredInstallEvt.prompt();
+      const { outcome } = await deferredInstallEvt.userChoice;
+      if (outcome === 'accepted') {
+        showToast('Media Sosial Sender telah dipasang!', 'success');
+      }
+      deferredInstallEvt = null;
+      closePwaInstallModal();
+    }
+
+    function openPwaInstallModal() {
+      document.getElementById('pwaInstallModal').classList.remove('hidden');
+    }
+
+    function closePwaInstallModal() {
+      document.getElementById('pwaInstallModal').classList.add('hidden');
+    }
+
+    /**
+     * Application State & Constants
+     */
+    const STORAGE_KEY = 'media_sosial_sender_pwa_v1';
+
+    const QUALITY_MAP = {
+      '360p': { label: '360p (Min)', badge: '360p Min' },
+      '480p': { label: '480p (SD)', badge: '480p SD' },
+      '720p': { label: '720p (HD)', badge: '720p HD' },
+      '1080p': { label: '1080p (Auto / Lalai)', badge: '1080p Auto' },
+      '2K': { label: '2K (Max)', badge: '2K Max' }
+    };
+
+    const DEFAULT_DATE = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+
+    function buildDefaultPlatforms(handleBase) {
+      return [
+        { id: 'yt', name: 'YouTube Shorts', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '20:00' },
+        { id: 'fb', name: 'Facebook', handle: handleBase, enabled: true, date: DEFAULT_DATE, time: '20:30' },
+        { id: 'ig', name: 'Instagram', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '21:00' },
+        { id: 'threads', name: 'Threads', handle: `@${handleBase}`, enabled: true, date: DEFAULT_DATE, time: '21:30' }
+      ];
+    }
+
+    const INITIAL_STATE = {
+      activeProfileId: 'apajadiclips',
+      profiles: [
+        {
+          id: 'apajadiclips',
+          name: 'apajadiclips',
+          initials: 'AC',
+          gradient: 'from-[#2563EB] to-[#60A5FA]',
+          platforms: buildDefaultPlatforms('apajadiclips')
+        },
+        {
+          id: 'shazclipper',
+          name: 'shazclipper',
+          initials: 'SC',
+          gradient: 'from-emerald-500 to-teal-400',
+          platforms: buildDefaultPlatforms('shazclipper')
+        }
+      ],
+      aspectRatio: '9:16', // '9:16' or '16:9'
+      videoQuality: '1080p', // '360p' min to '2K' max, default '1080p'
+      draftTitle: '',
+      draftCaption: '',
+      hashtags: ['#clips', '#viral', '#shorts', '#apajadi', '#virals', '#instagram'],
+      previewTab: 'yt', // 'yt', 'fb', 'ig', 'threads'
+      scheduledQueue: []
+    };
+
+    // Ephemeral media state for local video/thumbnail blobs
+    const localMedia = {
+      videoUrl: null,
+      videoName: '',
+      videoSizeText: '',
+      isPlaying: true,
+      thumbnailUrl: null,
+      thumbnailName: ''
+    };
+
+    let mobileViewState = 'col1'; // 'col1', 'col2', 'col3', 'all'
+    let selectedModalGradient = 'from-[#2563EB] to-[#60A5FA]';
+    let modalPreviewPlatformId = 'yt';
+    let state = loadState();
+
+    function normalizeState(parsed) {
+      const base = JSON.parse(JSON.stringify(INITIAL_STATE));
+      if (!parsed || typeof parsed !== 'object') return base;
+      const merged = { ...base, ...parsed };
+      const safeGrad = /^[\w\-\[\]#\s]+$/;
+      merged.profiles = (Array.isArray(parsed.profiles) ? parsed.profiles : base.profiles)
+        .filter(p => p && typeof p.name === 'string' && p.name.trim())
+        .map((p, i) => {
+          const handleBase = p.name.replace(/\s+/g, '').toLowerCase();
+          const defaults = buildDefaultPlatforms(handleBase);
+          const plats = Array.isArray(p.platforms) ? p.platforms : [];
+          return {
+            id: String(p.id || ('prof_' + Date.now() + '_' + i)),
+            name: p.name,
+            initials: String(p.initials || p.name.slice(0, 2)).toUpperCase().slice(0, 3),
+            gradient: (typeof p.gradient === 'string' && safeGrad.test(p.gradient)) ? p.gradient : 'from-[#2563EB] to-[#60A5FA]',
+            platforms: defaults.map(def => {
+              const found = plats.find(x => x && x.id === def.id) || {};
+              return {
+                ...def,
+                handle: typeof found.handle === 'string' ? found.handle : def.handle,
+                enabled: typeof found.enabled === 'boolean' ? found.enabled : def.enabled,
+                date: /^\d{4}-\d{2}-\d{2}$/.test(found.date || '') ? found.date : def.date,
+                time: /^\d{2}:\d{2}$/.test(found.time || '') ? found.time : def.time
+              };
+            })
+          };
+        });
+      if (merged.profiles.length === 0) merged.profiles = base.profiles;
+      if (!merged.profiles.some(p => p.id === merged.activeProfileId)) merged.activeProfileId = merged.profiles[0].id;
+      if (!['9:16', '16:9'].includes(merged.aspectRatio)) merged.aspectRatio = '9:16';
+      if (!QUALITY_MAP[merged.videoQuality]) merged.videoQuality = '1080p';
+      if (!['yt', 'fb', 'ig', 'threads'].includes(merged.previewTab)) merged.previewTab = 'yt';
+      merged.draftTitle = typeof merged.draftTitle === 'string' ? merged.draftTitle : '';
+      merged.draftCaption = typeof merged.draftCaption === 'string' ? merged.draftCaption : '';
+      merged.hashtags = Array.isArray(merged.hashtags) ? merged.hashtags.filter(t => typeof t === 'string' && t) : base.hashtags;
+      merged.scheduledQueue = Array.isArray(merged.scheduledQueue) ? merged.scheduledQueue.filter(q => q && Array.isArray(q.schedules)) : [];
+      merged.scheduledQueue.forEach(q => {
+        if (typeof q.profileGradient !== 'string' || !safeGrad.test(q.profileGradient)) q.profileGradient = 'from-[#2563EB] to-[#60A5FA]';
+      });
+      return merged;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return JSON.parse(JSON.stringify(INITIAL_STATE));
+        return normalizeState(JSON.parse(raw));
+      } catch (e) {
+        console.error('Failed to load state:', e);
+        return JSON.parse(JSON.stringify(INITIAL_STATE));
+      }
+    }
+
+    function persistState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn('Failed to save state:', e);
+      }
+    }
+
+    function getCurrentProfile() {
+      return state.profiles.find(p => p.id === state.activeProfileId) || state.profiles[0];
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function toLocalIsoDate(dt) {
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDateDDMMYYYY(isoDate) {
+      if (!isoDate || !isoDate.includes('-')) return '--/--/----';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function formatTime12h(time24) {
+      if (!time24 || !time24.includes(':')) return '08:00 PM';
+      let [hh, mm] = time24.split(':').map(Number);
+      const suffix = hh >= 12 ? 'PM' : 'AM';
+      hh = hh % 12;
+      if (hh === 0) hh = 12;
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${suffix}`;
+    }
+
+    function renderPlatformIcon(platformId) {
+      switch (platformId) {
+        case 'yt':
+          return `
+            <div class="w-9 h-9 rounded-xl bg-[#FF0000] flex items-center justify-center shrink-0 shadow-sm">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.77 10.32l-1.2-.5L18 9.06c1.84-.96 2.53-3.23 1.56-5.06s-3.24-2.53-5.07-1.56L6 6.94c-1.29.68-2.07 2.04-2 3.49.07 1.42.93 2.67 2.22 3.25.03.01 1.2.5 1.2.5L6 14.93c-1.83.97-2.53 3.24-1.56 5.07.97 1.83 3.24 2.53 5.07 1.56l8.5-4.5c1.29-.68 2.06-2.04 1.99-3.49-.07-1.42-.94-2.68-2.23-3.25zM10 14.65v-5.3L15 12l-5 2.65z"/>
+              </svg>
+            </div>`;
+        case 'fb':
+          return `
+            <div class="w-9 h-9 rounded-xl bg-[#1877F2] flex items-center justify-center shrink-0 shadow-sm">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.12 5.32H17V2.14A26.11 26.11 0 0 0 14.26 2c-2.72 0-4.58 1.66-4.58 4.7v2.62H6.61v3.56h3.07V22h3.68v-9.12h3.06l.46-3.56h-3.52V7.05c0-1.05.29-1.73 1.76-1.73z"/>
+              </svg>
+            </div>`;
+        case 'ig':
+          return `
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center shrink-0 shadow-sm">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+            </div>`;
+        case 'threads':
+        default:
+          return `
+            <div class="w-9 h-9 rounded-xl bg-[#16191D] border border-[#2F3640] flex items-center justify-center shrink-0 shadow-sm">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12a7 7 0 1 0-7 7c3.5 0 6-2 6-5.5 0-2.8-1.8-4.5-4.5-4.5-2.2 0-3.8 1.5-3.8 3.5s1.4 3.2 3.3 3.2c1.8 0 3-1.2 3-3V9.5" />
+              </svg>
+            </div>`;
+      }
+    }
+
+    /**
+     * Left Column: Profiles & Connected Accounts
+     */
+    function renderProfileDropdown() {
+      const current = getCurrentProfile();
+      const avatar = document.getElementById('activeProfileAvatar');
+      const label = document.getElementById('activeProfileLabel');
+      const menu = document.getElementById('profileDropdownMenu');
+
+      avatar.className = `w-8 h-8 rounded-full bg-gradient-to-tr ${current.gradient} flex items-center justify-center text-white font-bold text-xs shrink-0 shadow`;
+      avatar.textContent = current.initials;
+      label.textContent = current.name;
+
+      menu.innerHTML = state.profiles.map(prof => {
+        const selected = prof.id === current.id;
+        return `
+          <button
+            type="button"
+            role="option"
+            aria-selected="${selected}"
+            onclick="switchProfile('${prof.id}')"
+            class="w-full flex items-center justify-between px-3.5 py-2.5 text-left hover:bg-[#2A303A] transition cursor-pointer ${selected ? 'bg-[#2A303A]/70' : ''}"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-tr ${prof.gradient} flex items-center justify-center text-white font-bold text-[11px] shrink-0">
+                ${escapeHtml(prof.initials)}
+              </div>
+              <span class="text-sm font-medium text-[#F3F4F6] truncate">${escapeHtml(prof.name)}</span>
+            </div>
+            ${selected ? `<svg class="w-4 h-4 text-[#3B82F6] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleProfileDropdown(forceOpen) {
+      const menu = document.getElementById('profileDropdownMenu');
+      const arrow = document.getElementById('profileDropdownArrow');
+      const trigger = document.getElementById('profileDropdownTrigger');
+      const open = typeof forceOpen === 'boolean' ? forceOpen : menu.classList.contains('hidden');
+
+      if (open) {
+        menu.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
+        trigger.setAttribute('aria-expanded', 'true');
+      } else {
+        menu.classList.add('hidden');
+        arrow.classList.remove('rotate-180');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const wrapper = document.getElementById('profileDropdownWrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        toggleProfileDropdown(false);
+      }
+    });
+
+    function switchProfile(profileId) {
+      state.activeProfileId = profileId;
+      persistState();
+      toggleProfileDropdown(false);
+      renderProfileDropdown();
+      renderPlatformCards();
+      renderLivePhonePreview();
+      showToast(`Profil aktif: ${getCurrentProfile().name}`, 'info');
+    }
+
+    function openAddProfileModal() {
+      toggleProfileDropdown(false);
+      document.getElementById('modalNewProfileName').value = '';
+      document.getElementById('addProfileModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('modalNewProfileName').focus(), 50);
+    }
+
+    function closeAddProfileModal() {
+      document.getElementById('addProfileModal').classList.add('hidden');
+    }
+
+    function pickProfileGradient(el) {
+      selectedModalGradient = el.getAttribute('data-grad');
+      document.querySelectorAll('.grad-swatch').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-white', 'opacity-100');
+        btn.classList.add('opacity-75');
+      });
+      el.classList.add('ring-2', 'ring-white', 'opacity-100');
+      el.classList.remove('opacity-75');
+    }
+
+    function createNewProfileFromModal() {
+      const input = document.getElementById('modalNewProfileName');
+      const name = input.value.trim();
+      if (!name) {
+        showToast('Sila masukkan nama profil.', 'warning');
+        input.focus();
+        return;
+      }
+
+      const initials = name.slice(0, 2).toUpperCase();
+      const handleBase = name.replace(/\s+/g, '').toLowerCase();
+      const newProfile = {
+        id: 'prof_' + Date.now(),
+        name,
+        initials,
+        gradient: selectedModalGradient,
+        platforms: buildDefaultPlatforms(handleBase)
+      };
+
+      state.profiles.push(newProfile);
+      state.activeProfileId = newProfile.id;
+      persistState();
+      closeAddProfileModal();
+      renderProfileDropdown();
+      renderPlatformCards();
+      renderLivePhonePreview();
+      showToast(`Profil "${name}" berjaya ditambah!`, 'success');
+    }
+
+    let leftTabState = 'accounts'; // 'accounts' | 'schedule'
+
+    function selectLeftTab(tabKey) {
+      leftTabState = tabKey === 'schedule' ? 'schedule' : 'accounts';
+      document.querySelectorAll('.left-tab').forEach(btn => {
+        const active = btn.getAttribute('data-left-tab') === leftTabState;
+        btn.setAttribute('aria-selected', String(active));
+        btn.className = 'left-tab py-1.5 px-2 rounded-lg text-xs transition cursor-pointer ' + (active
+          ? 'font-semibold bg-[#2A303A] text-[#F3F4F6] border-b-2 border-[#3B82F6]'
+          : 'font-medium text-[#9CA3AF] hover:text-[#F3F4F6]');
+      });
+      renderPlatformCards();
+    }
+
+    function renderSwitch(plat, idx) {
+      return `
+        <button
+          type="button"
+          role="switch"
+          aria-checked="${plat.enabled}"
+          aria-label="Aktifkan ${escapeHtml(plat.name)}"
+          onclick="togglePlatformSwitch(${idx})"
+          class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${plat.enabled ? 'bg-[#2563EB]' : 'bg-[#2F3640]'}"
+        >
+          <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${plat.enabled ? 'translate-x-5' : 'translate-x-0'}"></span>
+        </button>`;
+    }
+
+    function renderPlatformCards() {
+      const profile = getCurrentProfile();
+      const container = document.getElementById('platformCardsList');
+      const activeTotal = profile.platforms.filter(p => p.enabled).length;
+      document.getElementById('enabledPlatformsSummary').textContent = `${activeTotal} / ${profile.platforms.length} akaun aktif`;
+
+      container.innerHTML = profile.platforms.map((plat, idx) => {
+        const cardShell = `rounded-xl bg-[#22272F] border ${plat.enabled ? 'border-[#2F3640]' : 'border-[#2F3640]/50 opacity-65'} p-3 transition`;
+
+        if (leftTabState === 'schedule') {
+          return `
+            <div class="${cardShell}">
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  ${renderPlatformIcon(plat.id)}
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-[#F3F4F6] truncate leading-tight">${escapeHtml(plat.name)}</div>
+                    <div class="text-[11px] text-[#3B82F6] truncate">${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}</div>
+                  </div>
+                </div>
+                ${renderSwitch(plat, idx)}
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block">
+                  <span class="block text-[10px] text-[#9CA3AF] mb-0.5">Tarikh</span>
+                  <input type="date" value="${escapeHtml(plat.date)}" onchange="updatePlatformDate(${idx}, this.value)" aria-label="Tarikh ${escapeHtml(plat.name)}"
+                    class="w-full bg-[#1D2127] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-lg px-2 py-1.5 text-xs text-[#F3F4F6] [color-scheme:dark]" />
+                </label>
+                <label class="block">
+                  <span class="block text-[10px] text-[#9CA3AF] mb-0.5">Masa</span>
+                  <input type="time" value="${escapeHtml(plat.time)}" onchange="updatePlatformTime(${idx}, this.value)" aria-label="Masa ${escapeHtml(plat.name)}"
+                    class="w-full bg-[#1D2127] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-lg px-2 py-1.5 text-xs text-[#F3F4F6] [color-scheme:dark]" />
+                </label>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="${cardShell}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                ${renderPlatformIcon(plat.id)}
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-semibold text-[#F3F4F6] truncate leading-tight">${escapeHtml(plat.name)}</div>
+                  <input
+                    type="text"
+                    value="${escapeHtml(plat.handle)}"
+                    aria-label="Akaun ${escapeHtml(plat.name)}"
+                    onchange="updateHandle(${idx}, this.value)"
+                    class="w-full bg-transparent text-xs text-[#9CA3AF] hover:text-[#F3F4F6] focus:text-[#3B82F6] focus:outline-none truncate mt-0.5 border-b border-transparent focus:border-[#2563EB]"
+                  />
+                </div>
+              </div>
+
+              ${renderSwitch(plat, idx)}
+
+              <div class="bg-[#1D2127] border border-[#2F3640] rounded-lg px-2.5 py-1.5 text-[11px] shrink-0 space-y-1 min-w-[126px]">
+                <label class="flex items-center justify-between gap-1.5 cursor-pointer relative">
+                  <span class="text-[#9CA3AF]">Tarikh:</span>
+                  <span class="font-medium text-[#F3F4F6] hover:text-[#3B82F6]">${formatDateDDMMYYYY(plat.date)}</span>
+                  <input type="date" value="${escapeHtml(plat.date)}" onchange="updatePlatformDate(${idx}, this.value)"
+                    class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" aria-label="Tarikh ${escapeHtml(plat.name)}" />
+                </label>
+                <label class="flex items-center justify-between gap-1.5 cursor-pointer relative">
+                  <span class="text-[#9CA3AF]">Masa:</span>
+                  <span class="font-medium text-[#F3F4F6] hover:text-[#3B82F6]">${formatTime12h(plat.time)}</span>
+                  <input type="time" value="${escapeHtml(plat.time)}" onchange="updatePlatformTime(${idx}, this.value)"
+                    class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" aria-label="Masa ${escapeHtml(plat.name)}" />
+                </label>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    function togglePlatformSwitch(idx) {
+      const profile = getCurrentProfile();
+      profile.platforms[idx].enabled = !profile.platforms[idx].enabled;
+      persistState();
+      renderPlatformCards();
+      renderLivePhonePreview();
+    }
+
+
+    function updateHandle(idx, val) {
+      const profile = getCurrentProfile();
+      profile.platforms[idx].handle = val.trim() || profile.name;
+      persistState();
+      renderLivePhonePreview();
+    }
+
+    function updatePlatformDate(idx, newDate) {
+      if (!newDate) return;
+      const profile = getCurrentProfile();
+      profile.platforms[idx].date = newDate;
+      persistState();
+      renderPlatformCards();
+      renderLivePhonePreview();
+    }
+
+    function updatePlatformTime(idx, newTime) {
+      if (!newTime) return;
+      const profile = getCurrentProfile();
+      profile.platforms[idx].time = newTime;
+      persistState();
+      renderPlatformCards();
+      renderLivePhonePreview();
+    }
+
+    function applyAutoStagger30m() {
+      const profile = getCurrentProfile();
+      const activeList = profile.platforms.filter(p => p.enabled);
+      if (activeList.length === 0) {
+        showToast('Aktifkan sekurang-kurangnya satu platform.', 'warning');
+        return;
+      }
+
+      const startDate = activeList[0].date || '2026-11-24';
+      const [startH, startM] = (activeList[0].time || '20:00').split(':').map(Number);
+      const baseMinutes = startH * 60 + startM;
+
+      activeList.forEach((plat, i) => {
+        const totalMins = baseMinutes + i * 30;
+        const dayShift = Math.floor(totalMins / (24 * 60));
+        const remMins = totalMins % (24 * 60);
+        const hh = String(Math.floor(remMins / 60)).padStart(2, '0');
+        const mm = String(remMins % 60).padStart(2, '0');
+
+        plat.time = `${hh}:${mm}`;
+        if (dayShift > 0) {
+          const dt = new Date(startDate + 'T00:00:00');
+          dt.setDate(dt.getDate() + dayShift);
+          plat.date = toLocalIsoDate(dt);
+        } else {
+          plat.date = startDate;
+        }
+      });
+
+      persistState();
+      renderPlatformCards();
+      renderLivePhonePreview();
+      showToast('Jadual berperingkat (+30m) telah disusun!', 'success');
+    }
+
+    /**
+     * Center Column: New Post Controls, Quality Pill (360p - 2K, Default 1080p Auto), Media & Hashtags
+     */
+    function setVideoQuality(qualityKey) {
+      if (!QUALITY_MAP[qualityKey]) return;
+      state.videoQuality = qualityKey;
+      persistState();
+      syncQualitySelectors();
+      renderLivePhonePreview();
+      showToast(`Kualiti video: ${QUALITY_MAP[qualityKey].label}`, 'info');
+    }
+
+    function syncQualitySelectors() {
+      const q = state.videoQuality || '1080p';
+      const qInfo = QUALITY_MAP[q] || QUALITY_MAP['1080p'];
+
+      const selEmpty = document.getElementById('qualitySelectEmpty');
+      const selLoaded = document.getElementById('qualitySelectLoaded');
+      const headerBadge = document.getElementById('headerQualityBadge');
+
+      if (selEmpty) selEmpty.value = q;
+      if (selLoaded) selLoaded.value = q;
+      if (headerBadge) {
+        headerBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#3B82F6]"></span>${escapeHtml(qInfo.label)}`;
+      }
+    }
+
+    function toggleAspectRatio(forced) {
+      if (forced) {
+        state.aspectRatio = forced;
+      } else {
+        state.aspectRatio = state.aspectRatio === '9:16' ? '16:9' : '9:16';
+      }
+      persistState();
+      syncAspectRatioSwitch();
+      renderLivePhonePreview();
+    }
+
+    function syncAspectRatioSwitch() {
+      const is169 = state.aspectRatio === '16:9';
+      const sw = document.getElementById('aspectRatioSwitch');
+      const thumb = document.getElementById('aspectRatioThumb');
+      const lbl916 = document.getElementById('labelRatio916');
+      const lbl169 = document.getElementById('labelRatio169');
+      const previewTag = document.getElementById('livePreviewRatioTag');
+
+      sw.setAttribute('aria-checked', String(is169));
+      if (is169) {
+        sw.classList.remove('bg-[#2F3640]');
+        sw.classList.add('bg-[#2563EB]');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+        lbl169.classList.add('text-[#F3F4F6]', 'font-semibold');
+        lbl169.classList.remove('text-[#9CA3AF]', 'font-medium');
+        lbl916.classList.remove('text-[#F3F4F6]', 'font-semibold');
+        lbl916.classList.add('text-[#9CA3AF]', 'font-medium');
+        previewTag.textContent = '16:9';
+      } else {
+        sw.classList.add('bg-[#2F3640]');
+        sw.classList.remove('bg-[#2563EB]');
+        thumb.classList.add('translate-x-0');
+        thumb.classList.remove('translate-x-5');
+        lbl916.classList.add('text-[#F3F4F6]', 'font-semibold');
+        lbl916.classList.remove('text-[#9CA3AF]', 'font-medium');
+        lbl169.classList.remove('text-[#F3F4F6]', 'font-semibold');
+        lbl169.classList.add('text-[#9CA3AF]', 'font-medium');
+        previewTag.textContent = '9:16';
+      }
+    }
+
+    (function bindVideoDropEvents() {
+      const area = document.getElementById('videoDropArea');
+      if (!area) return;
+
+      ['dragenter', 'dragover'].forEach(evt => {
+        area.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          area.classList.add('border-[#2563EB]', 'bg-[#2A303A]');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(evt => {
+        area.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          area.classList.remove('border-[#2563EB]', 'bg-[#2A303A]');
+        });
+      });
+
+      area.addEventListener('drop', (e) => {
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length > 0) {
+          loadVideoFile(files[0]);
+        }
+      });
+    })();
+
+    ['dragover', 'drop'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+
+    function handleVideoUploadChange(e) {
+      const file = e.target.files && e.target.files[0];
+      if (file) loadVideoFile(file);
+    }
+
+    function loadVideoFile(file) {
+      if (!file.type.startsWith('video/')) {
+        showToast('Sila pilih fail video yang sah.', 'warning');
+        return;
+      }
+      if (localMedia.videoUrl) {
+        URL.revokeObjectURL(localMedia.videoUrl);
+      }
+
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      localMedia.videoUrl = URL.createObjectURL(file);
+      localMedia.videoName = file.name;
+      localMedia.videoSizeText = `${mb} MB`;
+      localMedia.isPlaying = true;
+
+      document.getElementById('videoUploadEmpty').classList.add('hidden');
+      document.getElementById('videoUploadLoaded').classList.remove('hidden');
+      document.getElementById('videoUploadLoaded').classList.add('flex');
+      document.getElementById('uploadedVideoTitle').textContent = file.name;
+      document.getElementById('uploadedVideoSizeBadge').textContent = localMedia.videoSizeText;
+
+      renderLivePhonePreview();
+      showToast(`Video "${file.name}" sedia dipratonton!`, 'success');
+    }
+
+    function removeUploadedVideo() {
+      if (localMedia.videoUrl) {
+        URL.revokeObjectURL(localMedia.videoUrl);
+      }
+      localMedia.videoUrl = null;
+      localMedia.videoName = '';
+      localMedia.videoSizeText = '';
+      document.getElementById('videoUploadInput').value = '';
+
+      document.getElementById('videoUploadEmpty').classList.remove('hidden');
+      document.getElementById('videoUploadLoaded').classList.add('hidden');
+      document.getElementById('videoUploadLoaded').classList.remove('flex');
+
+      renderLivePhonePreview();
+      showToast('Video dikeluarkan daripada draf.', 'info');
+    }
+
+    function handleThumbnailUploadChange(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('Sila pilih fail imej untuk thumbnail.', 'warning');
+        return;
+      }
+      if (localMedia.thumbnailUrl) {
+        URL.revokeObjectURL(localMedia.thumbnailUrl);
+      }
+
+      localMedia.thumbnailUrl = URL.createObjectURL(file);
+      localMedia.thumbnailName = file.name;
+
+      document.getElementById('thumbnailThumbImg').src = localMedia.thumbnailUrl;
+      document.getElementById('thumbnailAttachedName').textContent = file.name;
+      document.getElementById('thumbnailAttachedBar').classList.remove('hidden');
+
+      renderLivePhonePreview();
+      showToast('Thumbnail dimuat naik.', 'success');
+    }
+
+    function removeUploadedThumbnail() {
+      if (localMedia.thumbnailUrl) {
+        URL.revokeObjectURL(localMedia.thumbnailUrl);
+      }
+      localMedia.thumbnailUrl = null;
+      localMedia.thumbnailName = '';
+      document.getElementById('thumbnailUploadInput').value = '';
+      document.getElementById('thumbnailAttachedBar').classList.add('hidden');
+      renderLivePhonePreview();
+    }
+
+    function handleDraftChange() {
+      const titleVal = document.getElementById('postTitleField').value;
+      const captionVal = document.getElementById('postCaptionField').value;
+      state.draftTitle = titleVal;
+      state.draftCaption = captionVal;
+      document.getElementById('captionLengthLabel').textContent = `${captionVal.length.toLocaleString()} / 2,200`;
+      persistState();
+      renderLivePhonePreview();
+    }
+
+    function renderHashtagChips() {
+      const box = document.getElementById('hashtagChipsBox');
+      const chips = state.hashtags.map((tag, i) => `
+        <span class="inline-flex items-center gap-1 bg-[#1D2127] hover:bg-[#2A303A] border border-[#2F3640] hover:border-[#2563EB]/60 text-[#F3F4F6] text-xs rounded-lg pl-2.5 pr-1.5 py-1 transition">
+          <button
+            type="button"
+            onclick="insertHashtag(${i})"
+            class="cursor-pointer hover:text-[#3B82F6] transition"
+            title="Klik untuk tambah ke Main Caption"
+          >${escapeHtml(tag)}</button>
+          <button
+            type="button"
+            onclick="deleteHashtag(${i})"
+            aria-label="Buang ${escapeHtml(tag)}"
+            class="text-[#9CA3AF] hover:text-rose-400 px-1 rounded cursor-pointer leading-none"
+          >×</button>
+        </span>
+      `).join('');
+
+      const addForm = `
+        <form onsubmit="submitNewHashtag(event)" class="inline-flex items-center">
+          <input
+            id="addHashtagInput"
+            type="text"
+            placeholder="+ Tag"
+            maxlength="30"
+            class="w-20 focus:w-28 bg-[#16191D] border border-dashed border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-lg px-2 py-1 text-xs text-[#F3F4F6] placeholder-[#9CA3AF] transition-all"
+          />
+        </form>
+      `;
+
+      box.innerHTML = chips + addForm;
+    }
+
+    function insertHashtag(index) {
+      const tag = state.hashtags[index];
+      if (!tag) return;
+      const capEl = document.getElementById('postCaptionField');
+      const cur = capEl.value;
+      if (cur.includes(tag)) {
+        showToast(`${tag} sudah ada dalam kapsyen.`, 'info');
+        return;
+      }
+      const sep = cur.length === 0 || cur.endsWith(' ') || cur.endsWith('\n') ? '' : ' ';
+      capEl.value = cur + sep + tag;
+      handleDraftChange();
+      showToast(`Ditambah: ${tag}`, 'success');
+    }
+
+    function deleteHashtag(index) {
+      state.hashtags.splice(index, 1);
+      persistState();
+      renderHashtagChips();
+    }
+
+    function submitNewHashtag(e) {
+      e.preventDefault();
+      const input = document.getElementById('addHashtagInput');
+      let raw = input.value.trim().replace(/\s+/g, '');
+      if (!raw) return;
+      if (!raw.startsWith('#')) raw = '#' + raw;
+      if (!state.hashtags.includes(raw)) {
+        state.hashtags.push(raw);
+        input.value = '';
+        persistState();
+        renderHashtagChips();
+        showToast(`Tag ${raw} disimpan.`, 'success');
+      }
+    }
+
+    /**
+     * Right Column: Live Phone Preview (YT Shorts, FB, IG, Threads)
+     */
+    function selectPreviewTab(tabId) {
+      state.previewTab = tabId;
+      persistState();
+
+      document.querySelectorAll('.platform-preview-tab').forEach(btn => {
+        const active = btn.getAttribute('data-platform-tab') === tabId;
+        if (active) {
+          btn.className = 'platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer bg-[#2A303A] text-[#F3F4F6] border-b-2 border-[#3B82F6]';
+        } else {
+          btn.className = 'platform-preview-tab py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer text-[#9CA3AF] hover:text-[#F3F4F6]';
+        }
+      });
+
+      renderLivePhonePreview();
+    }
+
+    function togglePreviewPlayPause() {
+      const vid = document.getElementById('phonePreviewVideo');
+      if (!vid) {
+        document.getElementById('videoUploadInput').click();
+        return;
+      }
+      if (vid.paused) {
+        vid.play().catch(() => {});
+        localMedia.isPlaying = true;
+      } else {
+        vid.pause();
+        localMedia.isPlaying = false;
+      }
+      const pauseBadge = document.getElementById('phonePauseOverlay');
+      if (pauseBadge) pauseBadge.classList.toggle('hidden', localMedia.isPlaying);
+    }
+
+    function buildMediaFrameHtml(containerClass = 'w-full h-full') {
+      const isLandscape = state.aspectRatio === '16:9';
+      const fitClass = isLandscape ? 'object-contain bg-black' : 'object-cover';
+
+      if (localMedia.videoUrl) {
+        return `
+          <div onclick="togglePreviewPlayPause()" class="relative ${containerClass} flex items-center justify-center bg-black cursor-pointer overflow-hidden">
+            <video
+              id="phonePreviewVideo"
+              src="${localMedia.videoUrl}"
+              ${localMedia.thumbnailUrl ? `poster="${localMedia.thumbnailUrl}"` : ''}
+              class="w-full h-full ${fitClass}"
+              autoplay
+              loop
+              muted
+              playsinline
+            ></video>
+            <div id="phonePauseOverlay" class="${localMedia.isPlaying ? 'hidden' : ''} absolute inset-0 bg-black/45 flex items-center justify-center">
+              <div class="w-12 h-12 rounded-full bg-black/70 border border-white/25 flex items-center justify-center text-white">
+                <svg class="w-5 h-5 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div onclick="togglePreviewPlayPause()" class="relative ${containerClass} flex items-center justify-center bg-gradient-to-b from-[#22272F] via-[#191D24] to-[#111418] cursor-pointer overflow-hidden group">
+          ${localMedia.thumbnailUrl ? `<img src="${localMedia.thumbnailUrl}" alt="Thumbnail" class="absolute inset-0 w-full h-full ${fitClass} opacity-80" />` : ''}
+          <div class="ambient-drift absolute w-36 h-36 rounded-full bg-[#2563EB]/20 blur-2xl pointer-events-none"></div>
+          <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full bg-black/55 group-hover:bg-[#2563EB] border border-white/20 flex items-center justify-center text-white shadow-lg transition">
+              <svg class="w-5 h-5 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <span class="text-[10px] font-medium text-white/75 bg-black/45 px-2.5 py-0.5 rounded-full">
+              ${state.aspectRatio} • Klik untuk muat video
+            </span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLivePhonePreview() {
+      const viewport = document.getElementById('phonePreviewViewport');
+      const profile = getCurrentProfile();
+      const tab = state.previewTab;
+      const plat = profile.platforms.find(p => p.id === tab) || profile.platforms[0];
+      const handle = plat ? plat.handle : `@${profile.name}`;
+      const scheduleStr = plat ? `${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}` : '24/11/2026 • 08:00 PM';
+
+      const titleText = state.draftTitle.trim() || 'Tajuk hantaran dipaparkan di sini';
+      const captionText = state.draftCaption.trim() || 'Kapsyen & hashtag pilihan anda akan kelihatan di sini...';
+      const qBadgeText = (QUALITY_MAP[state.videoQuality] || QUALITY_MAP['1080p']).badge;
+
+      const statusBar = `
+        <div class="relative z-20 flex items-center justify-between px-4 pt-2.5 pb-1 text-[10px] font-semibold text-white/90">
+          <span>9:41</span>
+          <div class="flex items-center gap-1.5">
+            <span class="px-1.5 py-0.2 rounded bg-[#2563EB] text-white text-[9px] font-bold shadow">${escapeHtml(qBadgeText)}</span>
+            <div class="w-4 h-2 rounded-sm border border-white/75 p-[1px]"><div class="w-full h-full bg-white rounded-[1px]"></div></div>
+          </div>
+        </div>
+      `;
+
+      if (tab === 'yt') {
+        viewport.innerHTML = `
+          <div class="relative w-full h-full flex flex-col justify-between bg-black text-white">
+            ${statusBar}
+            <div class="absolute inset-0">${buildMediaFrameHtml('w-full h-full')}</div>
+            <div class="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none"></div>
+
+            <div class="relative z-10 px-3.5 pt-2 flex items-center justify-between pointer-events-none">
+              <svg class="w-4 h-4 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+              <span class="text-[10px] bg-black/50 px-2 py-0.5 rounded-full text-white/80">Shorts</span>
+            </div>
+
+            <div class="relative z-10 mt-auto px-3.5 pb-2.5 flex items-end justify-between gap-2">
+              <div class="flex-1 min-w-0 space-y-1.5 text-left">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-tr ${profile.gradient} flex items-center justify-center text-white text-[10px] font-bold shrink-0 ring-1 ring-white/40">
+                    ${escapeHtml(profile.initials)}
+                  </div>
+                  <span class="text-xs font-semibold text-white truncate">${escapeHtml(handle)}</span>
+                  <span class="px-2 py-0.5 rounded-full bg-white text-black text-[9px] font-bold shrink-0">Subscribe</span>
+                </div>
+                <p class="text-xs font-semibold text-white leading-snug line-clamp-1">${escapeHtml(titleText)}</p>
+                <p class="text-[11px] text-white/85 leading-snug line-clamp-2">${escapeHtml(captionText)}</p>
+              </div>
+
+              <div class="flex flex-col items-center gap-3 text-white shrink-0 pb-1">
+                <div class="flex flex-col items-center gap-0.5">
+                  <div class="w-8 h-8 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  </div>
+                  <span class="text-[9px]">Like</span>
+                </div>
+                <div class="flex flex-col items-center gap-0.5">
+                  <div class="w-8 h-8 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <span class="text-[9px]">0</span>
+                </div>
+                <div class="flex flex-col items-center gap-0.5">
+                  <div class="w-8 h-8 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+                  </div>
+                  <span class="text-[9px]">Share</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative z-10 bg-black border-t border-white/10 px-3 py-1.5 flex items-center justify-around text-white/75 text-[9px]">
+              <div class="flex flex-col items-center"><span>⌂</span><span>Home</span></div>
+              <div class="flex flex-col items-center text-white font-semibold"><span>▶</span><span>Shorts</span></div>
+              <div class="w-6 h-6 rounded-full border border-white/50 flex items-center justify-center text-sm leading-none">+</div>
+              <div class="flex flex-col items-center"><span>▤</span><span>Subs</span></div>
+              <div class="flex flex-col items-center"><span>●</span><span>You</span></div>
+            </div>
+          </div>
+        `;
+      } else if (tab === 'fb') {
+        viewport.innerHTML = `
+          <div class="w-full h-full flex flex-col justify-between bg-[#18191A] text-white">
+            ${statusBar}
+            <div class="px-3.5 py-2 flex items-center justify-between border-b border-white/10">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${profile.gradient} flex items-center justify-center text-white font-bold text-xs shrink-0">
+                  ${escapeHtml(profile.initials)}
+                </div>
+                <div class="min-w-0">
+                  <div class="text-xs font-semibold truncate">${escapeHtml(handle)}</div>
+                  <div class="text-[9px] text-white/60 truncate">${scheduleStr} • 🌐</div>
+                </div>
+              </div>
+              <span class="text-white/60 text-xs">•••</span>
+            </div>
+
+            <div class="px-3.5 py-2 space-y-1 text-left">
+              <p class="text-xs font-semibold text-white line-clamp-1">${escapeHtml(titleText)}</p>
+              <p class="text-[11px] text-white/85 leading-snug line-clamp-2">${escapeHtml(captionText)}</p>
+            </div>
+
+            <div class="flex-1 min-h-0 bg-black">
+              ${buildMediaFrameHtml('w-full h-full')}
+            </div>
+
+            <div class="bg-[#18191A] px-3.5 py-2 border-t border-white/10 space-y-1.5">
+              <div class="flex items-center justify-between text-[10px] text-white/60">
+                <span>👍 ❤️ 128</span>
+                <span>14 Comments • 9 Shares</span>
+              </div>
+              <div class="grid grid-cols-3 pt-1 border-t border-white/10 text-center text-[11px] font-medium text-white/80">
+                <span>👍 Like</span>
+                <span>💬 Comment</span>
+                <span>↗ Share</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tab === 'ig') {
+        viewport.innerHTML = `
+          <div class="relative w-full h-full flex flex-col justify-between bg-black text-white">
+            ${statusBar}
+            <div class="absolute inset-0">${buildMediaFrameHtml('w-full h-full')}</div>
+            <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+
+            <div class="relative z-10 px-3.5 pt-1 flex items-center justify-between">
+              <span class="text-sm font-bold tracking-tight">Reels</span>
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+
+            <div class="relative z-10 mt-auto px-3.5 pb-3 flex items-end justify-between gap-2">
+              <div class="flex-1 min-w-0 space-y-1.5 text-left">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] p-[1.5px] shrink-0">
+                    <div class="w-full h-full rounded-full bg-[#16191D] flex items-center justify-center text-[9px] font-bold">${escapeHtml(profile.initials)}</div>
+                  </div>
+                  <span class="text-xs font-semibold truncate">${escapeHtml(handle)}</span>
+                  <span class="px-2 py-0.5 rounded-md border border-white/50 text-[9px] font-semibold">Follow</span>
+                </div>
+                <p class="text-xs font-semibold line-clamp-1">${escapeHtml(titleText)}</p>
+                <p class="text-[11px] text-white/85 line-clamp-2">${escapeHtml(captionText)}</p>
+                <div class="text-[10px] text-white/75 truncate">♫ Original audio • ${escapeHtml(profile.name)}</div>
+              </div>
+
+              <div class="flex flex-col items-center gap-3.5 shrink-0 pb-1">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        viewport.innerHTML = `
+          <div class="w-full h-full flex flex-col justify-between bg-[#101010] text-white">
+            ${statusBar}
+            <div class="py-1.5 flex items-center justify-center border-b border-white/10">
+              <span class="text-base font-bold">@</span>
+            </div>
+
+            <div class="flex-1 p-3.5 overflow-y-auto flex gap-2.5">
+              <div class="flex flex-col items-center shrink-0">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${profile.gradient} flex items-center justify-center text-xs font-bold">
+                  ${escapeHtml(profile.initials)}
+                </div>
+                <div class="w-[1.5px] flex-1 bg-white/15 my-1.5"></div>
+              </div>
+
+              <div class="flex-1 min-w-0 space-y-2 text-left">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold truncate">${escapeHtml(handle)}</span>
+                  <span class="text-[10px] text-white/50">Jadual</span>
+                </div>
+                <p class="text-xs font-semibold text-white leading-snug">${escapeHtml(titleText)}</p>
+                <p class="text-[11px] text-white/85 leading-relaxed whitespace-pre-line line-clamp-4">${escapeHtml(captionText)}</p>
+
+                <div class="rounded-xl overflow-hidden border border-white/15 ${state.aspectRatio === '16:9' ? 'h-32' : 'h-52'}">
+                  ${buildMediaFrameHtml('w-full h-full')}
+                </div>
+
+                <div class="flex items-center gap-4 pt-1 text-white/75 text-xs">
+                  <span>♡</span>
+                  <span>💬</span>
+                  <span>↻</span>
+                  <span>➤</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="px-4 py-2 border-t border-white/10 text-[10px] text-white/50 text-center">
+              Threads Cross-Post Preview
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Pre-Posting Preview & Confirmation Modal + Queue Logging
+     */
+    function openPrePostModal() {
+      const profile = getCurrentProfile();
+      const enabled = profile.platforms.filter(p => p.enabled);
+
+      if (enabled.length === 0) {
+        showToast('Aktifkan sekurang-kurangnya satu platform di lajur kiri.', 'warning');
+        return;
+      }
+
+      const preferred = enabled.find(p => p.id === state.previewTab) || enabled[0];
+      modalPreviewPlatformId = preferred.id;
+      renderPrePostModal();
+      document.getElementById('prePostConfirmModal').classList.remove('hidden');
+    }
+
+    function closePrePostModal() {
+      document.getElementById('prePostConfirmModal').classList.add('hidden');
+    }
+
+    function selectModalPreviewPlatform(platId) {
+      modalPreviewPlatformId = platId;
+      renderPrePostModal();
+    }
+
+    function renderPrePostModal() {
+      const profile = getCurrentProfile();
+      const enabled = profile.platforms.filter(p => p.enabled);
+      const qInfo = QUALITY_MAP[state.videoQuality] || QUALITY_MAP['1080p'];
+
+      const avatar = document.getElementById('confirmProfileAvatar');
+      avatar.className = `w-8 h-8 rounded-full bg-gradient-to-tr ${profile.gradient} flex items-center justify-center text-white text-xs font-bold shrink-0`;
+      avatar.textContent = profile.initials;
+
+      document.getElementById('confirmProfileName').textContent = profile.name;
+      document.getElementById('confirmQualityPill').textContent = qInfo.label;
+      document.getElementById('confirmAspectPill').textContent = state.aspectRatio;
+      document.getElementById('confirmVideoFileText').textContent = localMedia.videoName
+        ? `${localMedia.videoName} (${localMedia.videoSizeText})`
+        : `Draf Media (${qInfo.badge})`;
+      document.getElementById('confirmThumbFileText').textContent = localMedia.thumbnailName || 'Bingkai lalai';
+
+      const titleVal = state.draftTitle.trim() || '(Tiada Tajuk)';
+      const captionVal = state.draftCaption.trim() || '(Tiada Kapsyen)';
+      document.getElementById('confirmTitleText').textContent = titleVal;
+      document.getElementById('confirmCaptionText').textContent = captionVal;
+      document.getElementById('confirmActiveCount').textContent = `${enabled.length} platform aktif`;
+
+      const cardsContainer = document.getElementById('confirmPlatformCards');
+      cardsContainer.innerHTML = enabled.map(plat => {
+        const activeCard = plat.id === modalPreviewPlatformId;
+        return `
+          <button
+            type="button"
+            onclick="selectModalPreviewPlatform('${plat.id}')"
+            class="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border text-left transition cursor-pointer ${
+              activeCard
+                ? 'bg-[#2A303A] border-[#3B82F6] ring-1 ring-[#3B82F6]/40'
+                : 'bg-[#22272F] border-[#2F3640] hover:bg-[#2A303A]/70'
+            }"
+          >
+            <div class="flex items-center gap-2.5 min-w-0">
+              ${renderPlatformIcon(plat.id)}
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-[#F3F4F6] truncate">${escapeHtml(plat.name)}</div>
+                <div class="text-[11px] text-[#9CA3AF] truncate">${escapeHtml(plat.handle)}</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[11px] font-semibold text-[#3B82F6]">${formatDateDDMMYYYY(plat.date)} • ${formatTime12h(plat.time)}</div>
+              <div class="text-[10px] text-[#9CA3AF]">${activeCard ? 'Sedang dipratonton' : 'Semak pratonton'}</div>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      const activePlat = enabled.find(p => p.id === modalPreviewPlatformId) || enabled[0];
+      document.getElementById('confirmPreviewPlatformHeading').textContent = activePlat.name;
+      document.getElementById('confirmPreviewScheduleBadge').textContent = `${formatDateDDMMYYYY(activePlat.date)} • ${formatTime12h(activePlat.time)}`;
+
+      const previewFrame = document.getElementById('confirmPreviewCardFrame');
+      const isLandscape = state.aspectRatio === '16:9';
+      const fitClass = isLandscape ? 'object-contain bg-black' : 'object-cover';
+
+      previewFrame.innerHTML = `
+        <div class="relative w-full h-full rounded-[22px] bg-[#16191D] overflow-hidden flex flex-col justify-between text-white">
+          <div class="relative z-20 flex items-center justify-between px-3 pt-2 pb-1 text-[9px] font-semibold bg-black/50">
+            <span class="truncate">${escapeHtml(activePlat.handle)}</span>
+            <span class="px-1.5 py-0.2 rounded bg-[#2563EB] text-white font-bold shrink-0">${escapeHtml(qInfo.badge)}</span>
+          </div>
+
+          <div class="relative flex-1 min-h-0 bg-black flex items-center justify-center overflow-hidden">
+            ${
+              localMedia.videoUrl
+                ? `<video src="${localMedia.videoUrl}" ${localMedia.thumbnailUrl ? `poster="${localMedia.thumbnailUrl}"` : ''} class="w-full h-full ${fitClass}" autoplay loop muted playsinline></video>`
+                : localMedia.thumbnailUrl
+                  ? `<img src="${localMedia.thumbnailUrl}" alt="Thumbnail" class="w-full h-full ${fitClass}" />`
+                  : `<div class="flex flex-col items-center justify-center p-4 text-center space-y-1.5">
+                      <div class="w-10 h-10 rounded-full bg-[#2563EB]/25 border border-[#3B82F6]/40 flex items-center justify-center text-[#3B82F6]">▶</div>
+                      <span class="text-[10px] font-medium text-white/85">${escapeHtml(qInfo.label)}</span>
+                      <span class="text-[9px] text-white/55">Nisbah ${escapeHtml(state.aspectRatio)}</span>
+                    </div>`
+            }
+          </div>
+
+          <div class="relative z-20 p-2.5 bg-[#1D2127] border-t border-white/10 space-y-1 text-left">
+            <p class="text-[11px] font-semibold text-white line-clamp-1">${escapeHtml(titleVal)}</p>
+            <p class="text-[10px] text-white/75 line-clamp-2 leading-snug">${escapeHtml(captionVal)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function confirmScheduleNow() {
+      const profile = getCurrentProfile();
+      const enabled = profile.platforms.filter(p => p.enabled);
+      if (enabled.length === 0) return;
+
+      const qInfo = QUALITY_MAP[state.videoQuality] || QUALITY_MAP['1080p'];
+      const queueEntry = {
+        id: 'sched_' + Date.now(),
+        timestamp: new Date().toLocaleString('ms-MY'),
+        profileName: profile.name,
+        profileInitials: profile.initials,
+        profileGradient: profile.gradient,
+        quality: qInfo.label,
+        aspectRatio: state.aspectRatio,
+        videoName: localMedia.videoName || `Klip_${qInfo.badge.replace(/\s+/g, '_')}.mp4`,
+        title: state.draftTitle.trim() || '(Tiada Tajuk)',
+        caption: state.draftCaption.trim() || '(Tiada Kapsyen)',
+        schedules: enabled.map(p => ({
+          platform: p.name,
+          handle: p.handle,
+          date: formatDateDDMMYYYY(p.date),
+          time: formatTime12h(p.time)
+        }))
+      };
+
+      state.scheduledQueue.unshift(queueEntry);
+      persistState();
+      updateQueueCountBadge();
+      closePrePostModal();
+      showToast(`Disahkan! ${enabled.length} platform dijadualkan (${qInfo.badge}).`, 'success');
+      openQueueModal();
+    }
+
+    function updateQueueCountBadge() {
+      const el = document.getElementById('queueBadgeCount');
+      if (el) el.textContent = state.scheduledQueue.length;
+    }
+
+    function openQueueModal() {
+      renderQueueModalBody();
+      document.getElementById('queueModal').classList.remove('hidden');
+    }
+
+    function closeQueueModal() {
+      document.getElementById('queueModal').classList.add('hidden');
+    }
+
+    function renderQueueModalBody() {
+      const body = document.getElementById('queueModalBody');
+      const clearBtn = document.getElementById('clearQueueButton');
+
+      if (state.scheduledQueue.length === 0) {
+        clearBtn.classList.add('hidden');
+        body.innerHTML = `
+          <div class="text-center py-8 px-4 rounded-xl bg-[#22272F]/60 border border-dashed border-[#2F3640]">
+            <p class="text-sm font-medium text-[#F3F4F6]">Belum ada hantaran dalam senarai jadual</p>
+            <p class="text-xs text-[#9CA3AF] mt-1">Klik "Schedule All Posts" di lajur Live Preview untuk menyemak dan menjadualkan hantaran.</p>
+          </div>
+        `;
+        return;
+      }
+
+      clearBtn.classList.remove('hidden');
+      body.innerHTML = state.scheduledQueue.map((item, idx) => `
+        <div class="bg-[#22272F] border border-[#2F3640] rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${item.profileGradient} flex items-center justify-center text-white text-xs font-bold shrink-0">
+                ${escapeHtml(item.profileInitials)}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-semibold text-[#F3F4F6] truncate">${escapeHtml(item.title)}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#2563EB]/20 text-[#3B82F6]">${escapeHtml(item.aspectRatio)} • ${escapeHtml(item.quality)}</span>
+                </div>
+                <p class="text-[11px] text-[#9CA3AF] truncate">Profil: ${escapeHtml(item.profileName)} • Fail: ${escapeHtml(item.videoName)}</p>
+              </div>
+            </div>
+            <button type="button" onclick="removeQueueEntry(${idx})" class="text-xs text-[#9CA3AF] hover:text-rose-400 px-2 py-1 rounded cursor-pointer">Buang</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            ${item.schedules.map(s => `
+              <div class="flex items-center justify-between bg-[#1D2127] border border-[#2F3640] rounded-lg px-2.5 py-1.5 text-[11px]">
+                <span class="font-medium text-[#F3F4F6] truncate">${escapeHtml(s.platform)}</span>
+                <span class="text-[#3B82F6] font-medium shrink-0 ml-2">${escapeHtml(s.date)} • ${escapeHtml(s.time)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function removeQueueEntry(idx) {
+      state.scheduledQueue.splice(idx, 1);
+      persistState();
+      updateQueueCountBadge();
+      renderQueueModalBody();
+      showToast('Rekod jadual dipadam.', 'info');
+    }
+
+    function clearScheduledQueue() {
+      state.scheduledQueue = [];
+      persistState();
+      updateQueueCountBadge();
+      renderQueueModalBody();
+      showToast('Senarai jadual dikosongkan.', 'info');
+    }
+
+    /**
+     * Multi-Device JSON Export & Import
+     */
+    function exportSyncJson() {
+      try {
+        const jsonPayload = JSON.stringify({ app: 'media-sosial-sender', version: 1, exportedAt: new Date().toISOString(), ...state }, null, 2);
+        const blob = new Blob([jsonPayload], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `media-sosial-sender-sync-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        showToast('Fail Sync JSON berjaya dieksport!', 'success');
+      } catch (err) {
+        showToast('Gagal mengeksport JSON.', 'warning');
+      }
+    }
+
+    function importSyncJson(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!parsed || !Array.isArray(parsed.profiles)) {
+            throw new Error('Struktur JSON tidak sah');
+          }
+          state = normalizeState(parsed);
+          persistState();
+          hydrateAllViews();
+          showToast('Data peranti berjaya diimport!', 'success');
+        } catch (err) {
+          showToast('Fail JSON tidak sah.', 'warning');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    /**
+     * Mobile & Tablet Responsive View Switcher
+     */
+    function selectMobileView(viewKey) {
+      mobileViewState = viewKey;
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        const isCurrent = btn.getAttribute('data-nav-view') === viewKey;
+        if (isCurrent) {
+          btn.className = 'mobile-nav-btn py-2 px-2 rounded-xl text-xs font-semibold text-center transition cursor-pointer bg-[#2563EB] text-white shadow-sm';
+        } else {
+          btn.className = 'mobile-nav-btn py-2 px-2 rounded-xl text-xs font-medium text-center transition cursor-pointer bg-[#1D2127] text-[#9CA3AF] hover:text-[#F3F4F6]';
+        }
+      });
+      syncResponsiveColumns();
+    }
+
+    function syncResponsiveColumns() {
+      const isDesktop = window.innerWidth >= 1024;
+      const colIds = ['col1', 'col2', 'col3'];
+
+      colIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isDesktop || mobileViewState === 'all') {
+          el.classList.remove('hidden');
+        } else {
+          if (id === mobileViewState) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        }
+      });
+    }
+
+    window.addEventListener('resize', syncResponsiveColumns);
+
+    /**
+     * Toast Notification Helper
+     */
+    function showToast(text, level = 'info') {
+      const container = document.getElementById('toastBannerContainer');
+      const item = document.createElement('div');
+
+      const dotMap = {
+        success: 'bg-emerald-400',
+        warning: 'bg-amber-400',
+        info: 'bg-[#3B82F6]'
+      };
+
+      item.className = 'pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#1D2127] border border-[#2F3640] text-[#F3F4F6] shadow-2xl text-xs font-medium transition-all duration-200';
+      item.innerHTML = `
+        <span class="w-2 h-2 rounded-full shrink-0 ${dotMap[level] || dotMap.info}"></span>
+        <span class="flex-1">${escapeHtml(text)}</span>
+      `;
+
+      container.appendChild(item);
+      setTimeout(() => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(6px)';
+        setTimeout(() => item.remove(), 220);
+      }, 2800);
+    }
+
+    /**
+     * Initialize All UI Components on Load
+     */
+    function hydrateAllViews() {
+      renderProfileDropdown();
+      selectLeftTab(leftTabState);
+      syncQualitySelectors();
+      syncAspectRatioSwitch();
+      renderHashtagChips();
+
+      document.getElementById('postTitleField').value = state.draftTitle || '';
+      document.getElementById('postCaptionField').value = state.draftCaption || '';
+      document.getElementById('captionLengthLabel').textContent = `${(state.draftCaption || '').length.toLocaleString()} / 2,200`;
+
+      selectPreviewTab(state.previewTab || 'yt');
+      updateQueueCountBadge();
+      syncResponsiveColumns();
+    }
+
+    window.addEventListener('DOMContentLoaded', hydrateAllViews);
+  </script>
+</body>
+</html>
