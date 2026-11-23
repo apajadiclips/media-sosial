@@ -142,6 +142,22 @@
           <input id="headerImportJsonInput" type="file" accept="application/json" class="hidden" onchange="importSyncJson(event)" />
         </label>
 
+        <!-- Cloud Server (Worker) Button -->
+        <button
+          type="button"
+          onclick="openCloudModal()"
+          title="Pelayan awan: log masuk platform sebenar, siaran automatik & segerak data"
+          class="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#1D2127] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] transition cursor-pointer"
+        >
+          <span class="relative">
+            <svg class="w-3.5 h-3.5 text-[#3B82F6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg>
+            <span id="cloudStatusDot" class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#4B5563]"></span>
+          </span>
+          <span class="hidden md:inline">Awan</span>
+        </button>
+
         <!-- Scheduled Queue Button -->
         <button
           type="button"
@@ -295,7 +311,7 @@
         <!-- Bottom Status Footer -->
         <div class="mt-4 pt-3 border-t border-[#2F3640] flex items-center justify-between text-xs text-[#9CA3AF]">
           <span id="enabledPlatformsSummary">0 / 4 disambung • 0 aktif</span>
-          <span class="text-[#3B82F6] font-medium">Storan setempat aktif</span>
+          <span id="storageModeLabel" class="text-[#3B82F6] font-medium">Storan setempat aktif</span>
         </div>
       </section>
 
@@ -756,13 +772,14 @@
         </button>
         <button
           type="button"
+          id="confirmScheduleBtn"
           onclick="confirmScheduleNow()"
           class="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-lg shadow-[#2563EB]/30 transition cursor-pointer flex items-center justify-center gap-2"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span>Sahkan &amp; Jadualkan Sekarang</span>
+          <span id="confirmScheduleLabel">Sahkan &amp; Jadualkan Sekarang</span>
         </button>
       </div>
     </div>
@@ -826,6 +843,57 @@
         <button type="button" onclick="closePwaInstallModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">
           Tutup
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL E: CLOUD SERVER (CLOUDFLARE WORKER)                             -->
+  <!-- ===================================================================== -->
+  <div id="cloudModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#1D2127] border border-[#2F3640] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-base font-semibold text-[#F3F4F6]">Pelayan Awan</h3>
+          <p class="text-xs text-[#9CA3AF]">Log masuk platform sebenar, siaran automatik &amp; segerak data merentas peranti</p>
+        </div>
+        <button type="button" onclick="closeCloudModal()" class="p-2 rounded-xl bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white cursor-pointer">✕</button>
+      </div>
+
+      <div id="cloudLoggedOut" class="space-y-3">
+        <div>
+          <label for="cloudApiUrl" class="block text-xs font-medium text-[#F3F4F6] mb-1">URL Worker</label>
+          <input id="cloudApiUrl" type="url" placeholder="https://media-sosial-sender-api.xxx.workers.dev"
+            class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6] placeholder-[#9CA3AF]/60" />
+        </div>
+        <div>
+          <label for="cloudPassword" class="block text-xs font-medium text-[#F3F4F6] mb-1">Kata laluan (APP_PASSWORD)</label>
+          <input id="cloudPassword" type="password" autocomplete="current-password"
+            onkeydown="if(event.key==='Enter') cloudLogin()"
+            class="w-full bg-[#22272F] border border-[#2F3640] focus:border-[#2563EB] focus:outline-none rounded-xl px-3.5 py-2.5 text-sm text-[#F3F4F6]" />
+        </div>
+        <p class="text-[11px] text-[#9CA3AF]">Belum ada pelayan? Ikut langkah dalam <span class="text-[#3B82F6]">SETUP.md</span>. Tanpa pelayan, aplikasi berfungsi dalam mod setempat.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeCloudModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#9CA3AF] hover:text-white border border-[#2F3640] cursor-pointer">Batal</button>
+          <button id="cloudLoginBtn" type="button" onclick="cloudLogin()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">Log masuk</button>
+        </div>
+      </div>
+
+      <div id="cloudLoggedIn" class="hidden space-y-3">
+        <div class="p-3 rounded-xl bg-[#22272F] border border-[#2F3640] text-xs space-y-1">
+          <div class="flex items-center gap-2 text-emerald-400 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>Disambung ke pelayan</div>
+          <div id="cloudUrlText" class="text-[#9CA3AF] break-all"></div>
+          <div id="cloudSyncText" class="text-[#9CA3AF]"></div>
+        </div>
+        <div>
+          <span class="block text-xs font-medium text-[#F3F4F6] mb-1.5">Platform yang dikonfigurasi pada pelayan</span>
+          <div id="cloudConfiguredList" class="grid grid-cols-2 gap-1.5 text-[11px]"></div>
+        </div>
+        <div class="flex flex-wrap justify-end gap-2">
+          <button type="button" onclick="cloudLogout()" class="px-4 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-500/10 cursor-pointer mr-auto">Log keluar</button>
+          <button type="button" onclick="cloudSyncNow()" class="px-4 py-2 rounded-xl text-xs font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">Segerak sekarang</button>
+          <button type="button" onclick="closeCloudModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer">Selesai</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1091,6 +1159,7 @@
       } catch (e) {
         console.warn('Failed to save state:', e);
       }
+      if (typeof scheduleCloudPush === 'function') scheduleCloudPush();
     }
 
     function getCurrentProfile() {
@@ -1317,7 +1386,9 @@
 
       container.innerHTML = profile.platforms.map((plat, idx) => {
         const cardShell = `rounded-xl bg-[#22272F] border ${isActive(plat) ? 'border-[#2F3640]' : 'border-[#2F3640]/50 opacity-65'} p-3 transition`;
-        const accountLine = plat.connected
+        const accountLine = isCloudMode()
+          ? renderCloudAccountLine(plat, idx)
+          : plat.connected
           ? `<div class="flex items-center gap-1.5 mt-0.5 min-w-0">
                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
                <input type="text" value="${escapeHtml(plat.handle)}" aria-label="Nama akaun ${escapeHtml(plat.name)}" onchange="updateHandle(${idx}, this.value)"
@@ -1419,6 +1490,10 @@
     let connectModalIdx = null;
 
     function openConnectModal(idx) {
+      if (isCloudMode()) {
+        cloudConnect(idx);
+        return;
+      }
       const profile = getCurrentProfile();
       const plat = profile.platforms[idx];
       if (!plat) return;
@@ -1459,6 +1534,10 @@
     }
 
     function disconnectPlatform(idx) {
+      if (isCloudMode()) {
+        cloudDisconnect(idx);
+        return;
+      }
       const profile = getCurrentProfile();
       const plat = profile.platforms[idx];
       if (!plat) return;
@@ -1640,6 +1719,7 @@
       const mb = (file.size / (1024 * 1024)).toFixed(1);
       localMedia.videoUrl = URL.createObjectURL(file);
       localMedia.videoName = file.name;
+      localMedia.videoFile = file;
       localMedia.videoSizeText = `${mb} MB`;
       localMedia.isPlaying = true;
 
@@ -1658,6 +1738,7 @@
         URL.revokeObjectURL(localMedia.videoUrl);
       }
       localMedia.videoUrl = null;
+      localMedia.videoFile = null;
       localMedia.videoName = '';
       localMedia.videoSizeText = '';
       document.getElementById('videoUploadInput').value = '';
@@ -1683,6 +1764,7 @@
 
       localMedia.thumbnailUrl = URL.createObjectURL(file);
       localMedia.thumbnailName = file.name;
+      localMedia.thumbnailFile = file;
 
       document.getElementById('thumbnailThumbImg').src = localMedia.thumbnailUrl;
       document.getElementById('thumbnailAttachedName').textContent = file.name;
@@ -1697,6 +1779,7 @@
         URL.revokeObjectURL(localMedia.thumbnailUrl);
       }
       localMedia.thumbnailUrl = null;
+      localMedia.thumbnailFile = null;
       localMedia.thumbnailName = '';
       document.getElementById('thumbnailUploadInput').value = '';
       document.getElementById('thumbnailAttachedBar').classList.add('hidden');
@@ -2173,6 +2256,10 @@
     }
 
     function confirmScheduleNow() {
+      if (isCloudMode()) {
+        cloudSchedule();
+        return;
+      }
       const profile = getCurrentProfile();
       const enabled = profile.platforms.filter(isActive);
       if (enabled.length === 0) return;
@@ -2207,7 +2294,7 @@
 
     function updateQueueCountBadge() {
       const el = document.getElementById('queueBadgeCount');
-      if (el) el.textContent = state.scheduledQueue.length;
+      if (el) el.textContent = isCloudMode() ? cloudActiveJobCount() : state.scheduledQueue.length;
     }
 
     function openQueueModal() {
@@ -2220,6 +2307,10 @@
     }
 
     function renderQueueModalBody() {
+      if (isCloudMode()) {
+        renderCloudQueue();
+        return;
+      }
       const body = document.getElementById('queueModalBody');
       const clearBtn = document.getElementById('clearQueueButton');
 
@@ -2408,7 +2499,548 @@
       syncResponsiveColumns();
     }
 
-    window.addEventListener('DOMContentLoaded', hydrateAllViews);
+    window.addEventListener('DOMContentLoaded', () => {
+      hydrateAllViews();
+      cloudBootstrap();
+    });
+  </script>
+  <!-- ===================================================================== -->
+  <!-- CLOUD MODE: CLOUDFLARE WORKER (see /worker and SETUP.md)             -->
+  <!-- ===================================================================== -->
+  <script>
+    const CLOUD_STORAGE_KEY = 'media_sosial_sender_cloud_v1';
+    const UPLOAD_PART_SIZE = 20 * 1024 * 1024; // under the Worker 100 MB request limit, above R2's 5 MB minimum
+    const CLOUD_PLATFORM_NAMES = { yt: 'YouTube', fb: 'Facebook', ig: 'Instagram', threads: 'Threads' };
+    const CLOUD_JOB_STATUS = {
+      pending: ['Dijadualkan', 'bg-[#2563EB]/20 text-[#3B82F6]'],
+      processing: ['Sedang dihantar', 'bg-amber-500/15 text-amber-400'],
+      waiting: ['Platform sedang memproses', 'bg-amber-500/15 text-amber-400'],
+      published: ['Disiarkan', 'bg-emerald-500/15 text-emerald-400'],
+      failed: ['Gagal', 'bg-rose-500/15 text-rose-400'],
+      cancelled: ['Dibatalkan', 'bg-[#2F3640] text-[#9CA3AF]']
+    };
+
+    const cloud = loadCloudConfig();
+    let cloudConnections = [];
+    let cloudConfigured = {};
+    let cloudPosts = [];
+    let cloudPushTimer = null;
+    let cloudLastSync = null;
+    let cloudPendingNotice = null;
+
+    function loadCloudConfig() {
+      try {
+        const c = JSON.parse(localStorage.getItem(CLOUD_STORAGE_KEY) || '{}');
+        return { apiUrl: c.apiUrl || '', token: c.token || '' };
+      } catch (e) {
+        return { apiUrl: '', token: '' };
+      }
+    }
+
+    function saveCloudConfig() {
+      try {
+        localStorage.setItem(CLOUD_STORAGE_KEY, JSON.stringify(cloud));
+      } catch (e) {}
+    }
+
+    function isCloudMode() {
+      return !!(cloud.apiUrl && cloud.token);
+    }
+
+    function saveStateLocalOnly() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    async function cloudApi(path, { method = 'GET', body, raw = false } = {}) {
+      const headers = {};
+      if (cloud.token) headers.Authorization = 'Bearer ' + cloud.token;
+      let payload = body;
+      if (body !== undefined && !raw) {
+        headers['Content-Type'] = 'application/json';
+        payload = JSON.stringify(body);
+      }
+      let res;
+      try {
+        res = await fetch(cloud.apiUrl + path, { method, headers, body: payload });
+      } catch (e) {
+        throw new Error('Tidak dapat menghubungi pelayan. Semak URL Worker & sambungan internet.');
+      }
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && cloud.token) {
+        cloudForgetSession();
+        throw new Error(data.error || 'Sesi tamat. Sila log masuk semula.');
+      }
+      if (!res.ok) throw new Error(data.error || `Ralat pelayan (HTTP ${res.status})`);
+      return data;
+    }
+
+    /* ---------- Login / logout ---------- */
+
+    function openCloudModal() {
+      const loggedIn = isCloudMode();
+      document.getElementById('cloudLoggedOut').classList.toggle('hidden', loggedIn);
+      document.getElementById('cloudLoggedIn').classList.toggle('hidden', !loggedIn);
+      document.getElementById('cloudApiUrl').value = cloud.apiUrl || '';
+      document.getElementById('cloudPassword').value = '';
+      if (loggedIn) {
+        document.getElementById('cloudUrlText').textContent = cloud.apiUrl;
+        document.getElementById('cloudSyncText').textContent = cloudLastSync
+          ? `Segerak terakhir: ${cloudLastSync.toLocaleString('ms-MY')}`
+          : 'Belum disegerakkan dalam sesi ini';
+        document.getElementById('cloudConfiguredList').innerHTML = ['yt', 'fb', 'ig', 'threads'].map(id => `
+          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#22272F] border border-[#2F3640]">
+            <span class="text-[#F3F4F6]">${CLOUD_PLATFORM_NAMES[id]}</span>
+            <span class="${cloudConfigured[id] ? 'text-emerald-400' : 'text-[#9CA3AF]'}">${cloudConfigured[id] ? 'Sedia' : 'Belum'}</span>
+          </div>`).join('');
+      }
+      document.getElementById('cloudModal').classList.remove('hidden');
+    }
+
+    function closeCloudModal() {
+      document.getElementById('cloudModal').classList.add('hidden');
+    }
+
+    async function cloudLogin() {
+      const urlInput = document.getElementById('cloudApiUrl');
+      const pwInput = document.getElementById('cloudPassword');
+      let apiUrl = urlInput.value.trim().replace(/\/+$/, '');
+      if (!/^https:\/\/|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(apiUrl)) {
+        showToast('URL Worker mesti bermula dengan https://', 'warning');
+        urlInput.focus();
+        return;
+      }
+      if (!pwInput.value) {
+        showToast('Sila masukkan kata laluan.', 'warning');
+        pwInput.focus();
+        return;
+      }
+      const btn = document.getElementById('cloudLoginBtn');
+      btn.disabled = true;
+      btn.textContent = 'Menyambung...';
+      try {
+        cloud.apiUrl = apiUrl;
+        cloud.token = '';
+        const res = await cloudApi('/api/login', { method: 'POST', body: { password: pwInput.value } });
+        cloud.token = res.token;
+        saveCloudConfig();
+        await cloudBootstrap();
+        showToast('Disambung ke pelayan awan.', 'success');
+        openCloudModal();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Log masuk';
+      }
+    }
+
+    function cloudForgetSession() {
+      cloud.token = '';
+      saveCloudConfig();
+      cloudConnections = [];
+      cloudPosts = [];
+      state.profiles.forEach(prof => prof.platforms.forEach(plat => {
+        plat.connected = false;
+        plat.handle = '';
+        delete plat.cloudStatus;
+        delete plat.cloudOptions;
+      }));
+      saveStateLocalOnly();
+      hydrateAllViews();
+      updateCloudIndicator();
+    }
+
+    function cloudLogout() {
+      cloudForgetSession();
+      closeCloudModal();
+      showToast('Log keluar daripada pelayan. Kini dalam mod setempat.', 'info');
+    }
+
+    function updateCloudIndicator() {
+      const on = isCloudMode();
+      const dot = document.getElementById('cloudStatusDot');
+      if (dot) dot.className = `absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${on ? 'bg-emerald-400' : 'bg-[#4B5563]'}`;
+      const footer = document.getElementById('storageModeLabel');
+      if (footer) footer.textContent = on ? 'Segerak awan aktif' : 'Storan setempat aktif';
+    }
+
+    /* ---------- Sync ---------- */
+
+    function readOAuthReturnHash() {
+      if (!location.hash || location.hash.length < 2) return;
+      const p = new URLSearchParams(location.hash.slice(1));
+      if (!p.has('cloud') && !p.has('cloud_error')) return;
+      history.replaceState(null, '', location.pathname + location.search);
+      const name = CLOUD_PLATFORM_NAMES[p.get('platform')] || 'Akaun';
+      if (p.get('cloud_error')) cloudPendingNotice = [p.get('cloud_error'), 'warning'];
+      else if (p.get('cloud_select')) cloudPendingNotice = ['Akaun Facebook anda ada beberapa Page. Pilih satu pada kad Facebook.', 'info'];
+      else if (p.get('cloud_warn')) cloudPendingNotice = [p.get('cloud_warn'), 'warning'];
+      else cloudPendingNotice = [`${name} berjaya disambung!`, 'success'];
+    }
+
+    async function cloudBootstrap() {
+      readOAuthReturnHash();
+      updateCloudIndicator();
+      if (isCloudMode()) {
+        try {
+          const me = await cloudApi('/api/me');
+          cloudConfigured = me.configured || {};
+          const remote = await cloudApi('/api/state');
+          if (remote.state) {
+            state = normalizeState(remote.state);
+            saveStateLocalOnly();
+          } else {
+            await cloudPushNow();
+          }
+          await cloudRefreshConnections(false);
+          cloudLastSync = new Date();
+          hydrateAllViews();
+          cloudRefreshPosts().catch(() => {});
+        } catch (e) {
+          showToast(e.message, 'warning');
+        }
+      }
+      updateCloudIndicator();
+      if (cloudPendingNotice) {
+        showToast(cloudPendingNotice[0], cloudPendingNotice[1]);
+        cloudPendingNotice = null;
+      }
+    }
+
+    function scheduleCloudPush() {
+      if (!isCloudMode()) return;
+      clearTimeout(cloudPushTimer);
+      cloudPushTimer = setTimeout(() => cloudPushNow().catch(e => console.warn('Cloud sync:', e.message)), 1500);
+    }
+
+    async function cloudPushNow() {
+      clearTimeout(cloudPushTimer);
+      if (!isCloudMode()) return;
+      const copy = JSON.parse(JSON.stringify(state));
+      copy.profiles.forEach(prof => prof.platforms.forEach(plat => {
+        // Connections live on the server; never sync them as app data
+        plat.connected = false;
+        plat.handle = '';
+        delete plat.cloudStatus;
+        delete plat.cloudOptions;
+      }));
+      await cloudApi('/api/state', { method: 'PUT', body: { state: copy } });
+      cloudLastSync = new Date();
+    }
+
+    async function cloudSyncNow() {
+      try {
+        await cloudPushNow();
+        await cloudRefreshConnections(true);
+        await cloudRefreshPosts();
+        showToast('Data disegerakkan.', 'success');
+        openCloudModal();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    async function cloudRefreshConnections(render = true) {
+      const data = await cloudApi('/api/connections');
+      cloudConnections = data.connections || [];
+      state.profiles.forEach(prof => prof.platforms.forEach(plat => {
+        const c = cloudConnections.find(x => x.profileId === prof.id && x.platform === plat.id);
+        plat.connected = !!(c && c.status === 'connected');
+        plat.handle = plat.connected ? (c.accountName || '') : '';
+        plat.cloudStatus = c ? c.status : null;
+        plat.cloudOptions = c && c.options ? c.options : null;
+      }));
+      saveStateLocalOnly();
+      if (render) {
+        renderPlatformCards();
+        renderLivePhonePreview();
+      }
+    }
+
+    /* ---------- Connect accounts (OAuth) ---------- */
+
+    function renderCloudAccountLine(plat, idx) {
+      if (plat.connected) {
+        return `<div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+            <span class="flex-1 min-w-0 text-xs text-[#9CA3AF] truncate" title="Nama daripada ${escapeHtml(plat.name)}">${escapeHtml(plat.handle)}</span>
+            <button type="button" onclick="disconnectPlatform(${idx})" class="text-[10px] text-[#9CA3AF] hover:text-rose-400 shrink-0 cursor-pointer">Putus</button>
+          </div>`;
+      }
+      if (plat.cloudStatus === 'select' && Array.isArray(plat.cloudOptions)) {
+        return `<div class="flex items-center gap-1.5 mt-1 min-w-0">
+            <select id="metaPageSelect" aria-label="Pilih Facebook Page"
+              class="flex-1 min-w-0 bg-[#1D2127] border border-[#2F3640] rounded-lg px-2 py-1 text-xs text-[#F3F4F6] focus:outline-none focus:border-[#2563EB]">
+              ${plat.cloudOptions.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}${o.igUsername ? ' (IG @' + escapeHtml(o.igUsername) + ')' : ''}</option>`).join('')}
+            </select>
+            <button type="button" onclick="cloudSelectPage()" class="px-2 py-1 rounded-md text-[10px] font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white shrink-0 cursor-pointer">Pilih</button>
+          </div>`;
+      }
+      if (plat.id === 'ig') {
+        const fb = getCurrentProfile().platforms.find(p => p.id === 'fb');
+        if (fb && fb.cloudStatus === 'select') {
+          return `<div class="text-xs text-[#9CA3AF]/80 italic mt-0.5">Pilih Page pada kad Facebook</div>`;
+        }
+      }
+      if (!cloudConfigured[plat.id]) {
+        return `<div class="text-xs text-[#9CA3AF]/70 italic mt-0.5 truncate" title="Tetapkan kunci API platform ini pada Worker (lihat SETUP.md)">Belum dikonfigurasi</div>`;
+      }
+      return `<div class="flex items-center gap-2 mt-0.5">
+          <span class="text-xs text-[#9CA3AF]/70 italic whitespace-nowrap">Belum disambung</span>
+          <button type="button" onclick="openConnectModal(${idx})" class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white cursor-pointer whitespace-nowrap">Log masuk</button>
+        </div>`;
+    }
+
+    async function cloudConnect(idx) {
+      const profile = getCurrentProfile();
+      const plat = profile.platforms[idx];
+      if (!plat) return;
+      if (!cloudConfigured[plat.id]) {
+        showToast(`${plat.name} belum dikonfigurasi pada pelayan (lihat SETUP.md).`, 'warning');
+        return;
+      }
+      try {
+        showToast(`Membuka log masuk ${CLOUD_PLATFORM_NAMES[plat.id]}...`, 'info');
+        await cloudPushNow();
+        const res = await cloudApi('/api/oauth/start', {
+          method: 'POST',
+          body: { platform: plat.id, profileId: profile.id, returnUrl: location.href.split('#')[0] }
+        });
+        location.href = res.url;
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    async function cloudDisconnect(idx) {
+      const profile = getCurrentProfile();
+      const plat = profile.platforms[idx];
+      if (!plat) return;
+      if (!confirm(`Putuskan ${plat.name} (${plat.handle}) daripada profil ${profile.name}?\nHantaran ${plat.name} yang belum disiarkan untuk profil ini akan dibatalkan.`)) return;
+      try {
+        await cloudApi('/api/connections', { method: 'DELETE', body: { profileId: profile.id, platform: plat.id } });
+        await cloudRefreshConnections(true);
+        showToast(`${plat.name} diputuskan.`, 'info');
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    async function cloudSelectPage() {
+      const sel = document.getElementById('metaPageSelect');
+      if (!sel) return;
+      try {
+        const res = await cloudApi('/api/connections/select', { method: 'POST', body: { profileId: getCurrentProfile().id, optionId: sel.value } });
+        await cloudRefreshConnections(true);
+        showToast(res.igLinked ? 'Facebook & Instagram disambung!' : 'Facebook disambung. Page ini tiada Instagram dipautkan.', res.igLinked ? 'success' : 'info');
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    /* ---------- Upload & schedule ---------- */
+
+    async function cloudUploadFile(file, kind, onProgress) {
+      const type = file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg');
+      const { key, uploadId } = await cloudApi('/api/media/create', { method: 'POST', body: { kind, name: file.name, type, size: file.size } });
+      const total = Math.max(1, Math.ceil(file.size / UPLOAD_PART_SIZE));
+      const parts = [];
+      try {
+        for (let i = 0; i < total; i++) {
+          const chunk = file.slice(i * UPLOAD_PART_SIZE, (i + 1) * UPLOAD_PART_SIZE);
+          for (let attempt = 1; ; attempt++) {
+            try {
+              parts.push(await cloudApi(`/api/media/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&part=${i + 1}`, { method: 'PUT', body: chunk, raw: true }));
+              break;
+            } catch (e) {
+              if (attempt >= 3) throw e;
+              await sleep(1500 * attempt);
+            }
+          }
+          if (onProgress) onProgress(Math.round(((i + 1) / total) * 100));
+        }
+        return await cloudApi('/api/media/complete', { method: 'POST', body: { key, uploadId, parts } });
+      } catch (e) {
+        cloudApi('/api/media/abort', { method: 'POST', body: { key, uploadId } }).catch(() => {});
+        throw e;
+      }
+    }
+
+    async function cloudSchedule() {
+      const profile = getCurrentProfile();
+      const enabled = profile.platforms.filter(isActive);
+      if (enabled.length === 0) return;
+      if (!localMedia.videoFile) {
+        showToast('Muat naik video dahulu — semua platform memerlukan fail video.', 'warning');
+        return;
+      }
+      const btn = document.getElementById('confirmScheduleBtn');
+      const label = document.getElementById('confirmScheduleLabel');
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-wait');
+      try {
+        const video = await cloudUploadFile(localMedia.videoFile, 'video', pct => { label.textContent = `Memuat naik video ${pct}%`; });
+        let thumbKey = null;
+        if (localMedia.thumbnailFile) {
+          label.textContent = 'Memuat naik thumbnail...';
+          thumbKey = (await cloudUploadFile(localMedia.thumbnailFile, 'thumb')).key;
+        }
+        label.textContent = 'Menjadualkan...';
+        const targets = enabled.map(p => ({ platform: p.id, runAt: new Date(`${p.date}T${p.time}:00`).getTime() }));
+        await cloudApi('/api/posts', {
+          method: 'POST',
+          body: {
+            profileId: profile.id,
+            profileName: profile.name,
+            title: state.draftTitle.trim(),
+            caption: state.draftCaption.trim(),
+            aspectRatio: state.aspectRatio,
+            quality: state.videoQuality,
+            media: { key: video.key, name: localMedia.videoFile.name },
+            thumbKey,
+            targets
+          }
+        });
+        closePrePostModal();
+        const past = targets.filter(t => t.runAt <= Date.now()).length;
+        showToast(past
+          ? `Dijadualkan! ${past} platform yang masanya sudah lepas akan disiarkan dalam ~1 minit.`
+          : `Dijadualkan! ${targets.length} platform akan disiarkan secara automatik.`, 'success');
+        openQueueModal();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-wait');
+        label.textContent = 'Sahkan & Jadualkan Sekarang';
+      }
+    }
+
+    /* ---------- Queue ---------- */
+
+    async function cloudRefreshPosts() {
+      const data = await cloudApi('/api/posts');
+      cloudPosts = data.posts || [];
+      updateQueueCountBadge();
+    }
+
+    function cloudActiveJobCount() {
+      return cloudPosts.reduce((n, p) => n + p.jobs.filter(j => ['pending', 'processing', 'waiting'].includes(j.status)).length, 0);
+    }
+
+    function formatRunAt(ms) {
+      const d = new Date(ms);
+      return `${formatDateDDMMYYYY(toLocalIsoDate(d))} • ${formatTime12h(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)}`;
+    }
+
+    async function renderCloudQueue() {
+      const body = document.getElementById('queueModalBody');
+      document.getElementById('clearQueueButton').classList.add('hidden');
+      if (!cloudPosts.length) body.innerHTML = `<p class="text-xs text-[#9CA3AF] text-center py-6">Memuatkan senarai daripada pelayan...</p>`;
+      try {
+        await cloudRefreshPosts();
+      } catch (e) {
+        body.innerHTML = `<p class="text-xs text-rose-400 text-center py-6">${escapeHtml(e.message)}</p>`;
+        return;
+      }
+
+      const toolbar = `
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] text-[#9CA3AF]">Pelayan menyemak jadual setiap minit.</span>
+          <div class="flex gap-1.5">
+            <button type="button" onclick="cloudRunDue()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">Semak sekarang</button>
+            <button type="button" onclick="renderCloudQueue()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#22272F] hover:bg-[#2A303A] text-[#F3F4F6] border border-[#2F3640] cursor-pointer">Muat semula</button>
+          </div>
+        </div>`;
+
+      if (!cloudPosts.length) {
+        body.innerHTML = toolbar + `
+          <div class="text-center py-8 px-4 rounded-xl bg-[#22272F]/60 border border-dashed border-[#2F3640]">
+            <p class="text-sm font-medium text-[#F3F4F6]">Belum ada hantaran di pelayan</p>
+            <p class="text-xs text-[#9CA3AF] mt-1">Klik "Schedule All Posts" untuk menjadualkan siaran sebenar.</p>
+          </div>`;
+        return;
+      }
+
+      body.innerHTML = toolbar + cloudPosts.map(post => {
+        const cancellable = post.jobs.some(j => j.status === 'pending' || j.status === 'waiting');
+        return `
+          <div class="bg-[#22272F] border border-[#2F3640] rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-semibold text-[#F3F4F6] truncate">${escapeHtml(post.title || '(Tiada Tajuk)')}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#2563EB]/20 text-[#3B82F6]">${escapeHtml(post.aspectRatio)} • ${escapeHtml(post.quality)}</span>
+                </div>
+                <p class="text-[11px] text-[#9CA3AF] truncate">Profil: ${escapeHtml(post.profileName)} • Fail: ${escapeHtml(post.mediaName || '-')}${post.mediaDeleted ? ' (dipadam dari storan)' : ''}</p>
+              </div>
+              ${cancellable ? `<button type="button" onclick="cloudCancelPost('${escapeHtml(post.id)}')" class="text-xs text-[#9CA3AF] hover:text-rose-400 px-2 py-1 rounded cursor-pointer shrink-0">Batal</button>` : ''}
+            </div>
+            <div class="space-y-1.5">
+              ${post.jobs.map(j => {
+                const [label, cls] = CLOUD_JOB_STATUS[j.status] || [j.status, 'bg-[#2F3640] text-[#9CA3AF]'];
+                const canRetry = (j.status === 'failed' || j.status === 'cancelled') && !post.mediaDeleted;
+                return `
+                  <div class="bg-[#1D2127] border border-[#2F3640] rounded-lg px-2.5 py-1.5 text-[11px] space-y-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-medium text-[#F3F4F6] truncate">${escapeHtml(CLOUD_PLATFORM_NAMES[j.platform] || j.platform)}</span>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span class="text-[#9CA3AF]">${formatRunAt(j.runAt)}</span>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${cls}">${label}</span>
+                      </div>
+                    </div>
+                    ${j.error ? `<p class="text-[10px] ${j.status === 'failed' ? 'text-rose-400' : 'text-amber-400'} break-words">${escapeHtml(j.error)}</p>` : ''}
+                    ${(j.resultUrl || canRetry) ? `<div class="flex items-center gap-3">
+                      ${j.resultUrl ? `<a href="${escapeHtml(j.resultUrl)}" target="_blank" rel="noopener" class="text-[10px] text-[#3B82F6] hover:underline">Lihat siaran ↗</a>` : ''}
+                      ${canRetry ? `<button type="button" onclick="cloudRetryJob('${escapeHtml(j.id)}')" class="text-[10px] text-[#3B82F6] hover:underline cursor-pointer">Cuba semula</button>` : ''}
+                    </div>` : ''}
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function cloudCancelPost(postId) {
+      if (!confirm('Batalkan semua siaran yang belum dihantar untuk hantaran ini?')) return;
+      try {
+        await cloudApi(`/api/posts/${encodeURIComponent(postId)}`, { method: 'DELETE' });
+        showToast('Hantaran dibatalkan.', 'info');
+        renderCloudQueue();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    async function cloudRetryJob(jobId) {
+      try {
+        await cloudApi(`/api/jobs/${encodeURIComponent(jobId)}/retry`, { method: 'POST' });
+        showToast('Akan dicuba semula dalam ~1 minit.', 'info');
+        renderCloudQueue();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    async function cloudRunDue() {
+      try {
+        const r = await cloudApi('/api/run-due', { method: 'POST' });
+        showToast(r.processed ? `${r.processed} tugasan diproses.` : 'Tiada siaran yang tiba masanya.', 'info');
+        renderCloudQueue();
+      } catch (e) {
+        showToast(e.message, 'warning');
+      }
+    }
+
+    // Keep the queue fresh while it is open
+    setInterval(() => {
+      if (isCloudMode() && !document.getElementById('queueModal').classList.contains('hidden')) renderCloudQueue();
+    }, 20000);
   </script>
 </body>
 </html>

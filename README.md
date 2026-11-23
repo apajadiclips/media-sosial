@@ -1,9 +1,16 @@
 # Media Sosial Sender
 
-PWA satu fail (`index.html`) untuk menyediakan dan menjadualkan hantaran merentas YouTube Shorts, Facebook, Instagram dan Threads — tanpa langganan. Spesifikasi penuh dalam [`MASTER_PROMPT.md`](MASTER_PROMPT.md).
+PWA satu fail (`index.html`) untuk menyediakan dan menjadualkan hantaran merentas YouTube Shorts, Facebook, Instagram dan Threads — tanpa langganan. Spesifikasi asal dalam [`MASTER_PROMPT.md`](MASTER_PROMPT.md).
 
-## Guna
+## Dua mod
 
-Hoskan `index.html` di mana-mana pelayan HTTPS statik (cth. GitHub Pages), buka di Chrome, kemudian **⋮ → Add to Home screen / Install app**.
+| Mod | Apa berlaku |
+|---|---|
+| **Setempat** (lalai) | Semua data dalam pelayar peranti. Nama akaun ditaip sendiri. Jadual hanya direkod, tidak disiarkan. Guna Export/Import JSON untuk pindah antara peranti. |
+| **Awan** (butang **Awan**) | Disambung ke Cloudflare Worker dalam [`worker/`](worker/). Log masuk sebenar ke setiap platform (nama akaun dikesan automatik), video disiarkan sendiri pada masa dijadualkan, data disegerakkan merentas peranti. |
 
-Data (profil, jadual, hashtag, senarai jadual) disimpan dalam `localStorage` peranti. Guna **Export JSON / Import JSON** di header untuk selaraskan antara telefon, tablet dan web. Fail video/thumbnail hanya untuk pratonton setempat dan tidak dieksport.
+Langkah pemasangan mod awan: **[SETUP.md](SETUP.md)**.
+
+## Guna di telefon
+
+Hoskan `index.html` di HTTPS (cth. GitHub Pages), buka di Chrome, kemudian **⋮ → Add to Home screen / Install app**.

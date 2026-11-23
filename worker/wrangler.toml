@@ -1,0 +1,32 @@
+# Media Sosial Sender — Cloudflare Worker API
+# Lihat ../SETUP.md untuk langkah pemasangan penuh.
+name = "media-sosial-sender-api"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# Semak jadual setiap minit dan siarkan hantaran yang sudah tiba masanya
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "media-sosial-sender"
+database_id = "GANTI_DENGAN_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "media-sosial-sender-media"
+
+[vars]
+# URL awam Worker ini (tanpa / di hujung). Digunakan untuk redirect OAuth & pautan video untuk Meta.
+PUBLIC_URL = "https://media-sosial-sender-api.GANTI-SUBDOMAIN.workers.dev"
+# Asal (origin) laman index.html, dipisahkan koma. Contoh GitHub Pages:
+ALLOWED_ORIGINS = "https://apajadiclips.github.io"
+# Versi Graph API Meta (Facebook & Instagram). Semak versi semasa di developers.facebook.com/docs/graph-api/changelog
+GRAPH_VERSION = "v23.0"
+
+# Rahsia (JANGAN letak di sini) — tetapkan dengan `npx wrangler secret put NAMA`:
+#   APP_PASSWORD, SESSION_SECRET, ENC_KEY,
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+#   META_APP_ID, META_APP_SECRET,
+#   THREADS_APP_ID, THREADS_APP_SECRET
