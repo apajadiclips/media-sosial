@@ -1,23 +1,32 @@
-# Panduan Pemasangan Pelayan Awan (Pilihan 3)
+# Panduan Pemasangan Pelayan Awan (Supabase)
 
-Panduan ini menyambungkan `index.html` kepada pelayan kecil percuma di Cloudflare (`worker/`). Selepas siap:
+Panduan ini menyambungkan `index.html` kepada projek **Supabase** percuma anda sendiri (folder `supabase/`). Selepas siap:
 
-- Tekan **Log masuk** pada setiap kad platform, dan nama akaun sebenar dikesan secara automatik.
-- Hantaran disiarkan sendiri pada masa dijadualkan, walaupun telefon atau komputer anda ditutup.
-- Profil, hashtag dan draf disegerakkan antara semua peranti selepas log masuk ke pelayan.
+- **Nama akaun dikesan automatik.** Tekan **Log masuk** pada setiap kad platform, dan nama akaun sebenar dipaparkan.
+- **Hantaran disiarkan sendiri** pada masa yang dijadualkan, walaupun telefon atau komputer anda ditutup.
+- **Data disegerakkan merentas peranti**, termasuk profil, hashtag, draf dan senarai jadual.
 
-> Nama menu di Google Cloud dan Meta for Developers kerap berubah. Jika menu yang disebut di bawah tidak sama, cari nama yang hampir sama.
+Ini bahagian-bahagian Supabase yang digunakan:
+
+| Bahagian | Kegunaan |
+|---|---|
+| Postgres | Akaun yang disambung (token disulitkan), hantaran dan jadual |
+| Storage | Video dan thumbnail, dipadam selepas berjaya disiarkan |
+| Edge Function `api` | Log masuk, OAuth dan proses siaran |
+| pg_cron | Memanggil fungsi setiap minit |
+
+> Nama menu di Supabase, Google Cloud dan Meta for Developers kerap berubah. Jika menu yang disebut tidak sama, cari nama yang hampir sama.
 
 ---
 
 ## 0. Keperluan
 
-- Akaun **Cloudflare** (percuma): https://dash.cloudflare.com/sign-up
+- Akaun **Supabase** (percuma, tiada kad): https://supabase.com/dashboard
 - Akaun **Google** yang memiliki saluran YouTube anda
 - Akaun **Facebook** yang menjadi admin Facebook Page anda
 - Akaun **Instagram Professional** (Business/Creator) yang **dipautkan ke Facebook Page** itu
 - Akaun **Threads**
-- **Node.js 18+** pada komputer (untuk arahan `npx wrangler`)
+- **Node.js 18+** pada komputer, untuk arahan `npx supabase`
 
 ---
 
@@ -25,141 +34,132 @@ Panduan ini menyambungkan `index.html` kepada pelayan kecil percuma di Cloudflar
 
 1. Gabungkan (merge) branch ini ke `main`.
 2. GitHub → repo `media-sosial` → **Settings → Pages**.
-3. **Source:** *Deploy from a branch*. **Branch:** `main`, folder `/ (root)`. Kemudian tekan **Save**.
-4. Selepas beberapa minit, aplikasi boleh dibuka di `https://apajadiclips.github.io/media-sosial/`.
-
-Asal (origin) laman ini ialah `https://apajadiclips.github.io`. Nilai itu sudah ditetapkan dalam `worker/wrangler.toml` (`ALLOWED_ORIGINS`).
+3. Untuk **Source**, pilih *Deploy from a branch*. Untuk **Branch**, pilih `main`, folder `/ (root)`, kemudian tekan **Save**.
+4. Selepas beberapa minit, aplikasi tersedia di `https://apajadiclips.github.io/media-sosial/`.
 
 ---
 
-## 2. Cloudflare Worker, D1 & R2
+## 2. Cipta projek Supabase
 
-Dari folder `worker/`:
+1. Pergi ke https://supabase.com/dashboard dan pilih **New project**. Pilih rantau berhampiran, contohnya *Southeast Asia (Singapore)*.
+2. Selepas projek siap, salin **Project ref** dari URL dashboard, iaitu `https://supabase.com/dashboard/project/<PROJECT_REF>`.
 
-```bash
-cd worker
-```
+Dalam panduan ini:
 
-```bash
-npm install
-```
+| Nama | Nilai |
+|---|---|
+| `PROJECT_URL` | `https://<PROJECT_REF>.supabase.co` |
+| `API_URL` | `https://<PROJECT_REF>.supabase.co/functions/v1/api` |
 
-```bash
-npx wrangler login
-```
+### Pasang pangkalan data dan fungsi
 
-Cipta pangkalan data D1:
+Jalankan semua arahan di bawah dari folder utama repo ini.
 
-```bash
-npx wrangler d1 create media-sosial-sender
-```
-
-Salin `database_id` yang dipaparkan, kemudian tampal ke dalam `wrangler.toml` menggantikan `GANTI_DENGAN_D1_DATABASE_ID`.
-
-Cipta storan video R2. Cloudflare mungkin meminta anda mengaktifkan R2 dan menambah kaedah bayaran dahulu, tetapi 10 GB pertama percuma:
+Log masuk ke Supabase:
 
 ```bash
-npx wrangler r2 bucket create media-sosial-sender-media
+npx supabase login
 ```
 
-Cipta jadual dalam D1:
+Pautkan repo ini kepada projek anda. Gantikan `PROJECT_REF` dengan nilai projek anda:
 
 ```bash
-npm run db:init
+npx supabase link --project-ref PROJECT_REF
 ```
 
-Tetapkan 3 rahsia asas. Setiap arahan akan meminta anda menaip nilainya:
+Cipta jadual dan bucket storan:
 
 ```bash
-npx wrangler secret put APP_PASSWORD
+npx supabase db push
 ```
+
+Tetapkan rahsia asas. Gantikan setiap nilai `...`. `ALLOWED_ORIGINS` sudah betul untuk GitHub Pages:
 
 ```bash
-npx wrangler secret put SESSION_SECRET
+npx supabase secrets set APP_PASSWORD=... SESSION_SECRET=... ENC_KEY=... CRON_SECRET=... ALLOWED_ORIGINS=https://apajadiclips.github.io
 ```
+
+| Rahsia | Keterangan |
+|---|---|
+| `APP_PASSWORD` | Kata laluan untuk log masuk ke aplikasi. Gunakan kata laluan yang kuat. |
+| `SESSION_SECRET`, `ENC_KEY`, `CRON_SECRET` | Tiga rentetan rawak yang panjang dan **berlainan**. |
+
+Untuk menjana setiap rentetan rawak, jalankan arahan ini sekali bagi setiap rahsia:
 
 ```bash
-npx wrangler secret put ENC_KEY
+openssl rand -hex 32
 ```
 
-- `APP_PASSWORD`: kata laluan untuk log masuk ke aplikasi. Gunakan kata laluan yang kuat.
-- `SESSION_SECRET` dan `ENC_KEY`: rentetan rawak yang panjang. Anda boleh jana dengan arahan di bawah:
+> ⚠️ Jangan tukar `ENC_KEY` selepas akaun disambung. Token disulitkan dengannya, jadi jika ia ditukar, semua akaun perlu disambung semula.
+
+Deploy fungsi `api`:
 
 ```bash
-openssl rand -base64 32
+npx supabase functions deploy api --no-verify-jwt
 ```
 
-> ⚠️ Jangan tukar `ENC_KEY` selepas ini. Token akaun disulitkan dengannya, jadi jika ia ditukar semua akaun perlu disambung semula.
+`--no-verify-jwt` diperlukan kerana fungsi ini menggunakan log masuknya sendiri (`APP_PASSWORD`) dan dipanggil terus oleh Google/Meta selepas log masuk.
 
-Deploy kali pertama:
+### Hidupkan penjadual (sekali sahaja)
 
-```bash
-npm run deploy
-```
+1. Buka fail `supabase/cron.sql`.
+2. Gantikan `GANTI_PROJECT_REF` dengan Project ref anda.
+3. Gantikan `GANTI_CRON_SECRET` dengan nilai `CRON_SECRET` yang anda tetapkan tadi.
+4. Salin seluruh kandungan fail ke **Supabase Dashboard → SQL Editor**, kemudian tekan **Run**.
 
-Wrangler akan memaparkan URL seperti `https://media-sosial-sender-api.NAMAANDA.workers.dev`. Salin URL itu ke `PUBLIC_URL` dalam `wrangler.toml`, kemudian deploy semula:
-
-```bash
-npm run deploy
-```
-
-Dalam langkah 3–5 di bawah, `PUBLIC_URL` merujuk kepada URL ini.
+Untuk menyemak bahawa penjadual berjalan, pergi ke **Integrations → Cron → Jobs**. Anda patut nampak `media-sosial-sender-tick` berjalan setiap minit.
 
 ---
 
 ## 3. YouTube (Google Cloud)
 
 1. Buka https://console.cloud.google.com/ dan cipta **projek baharu**.
-2. **APIs & Services → Library**. Cari **YouTube Data API v3**, kemudian tekan **Enable**.
-3. **Google Auth Platform / OAuth consent screen**:
+2. Pergi ke **APIs & Services → Library**, cari **YouTube Data API v3**, kemudian tekan **Enable**.
+3. Pergi ke **Google Auth Platform / OAuth consent screen** dan tetapkan:
    - **User type:** External
-   - **Scopes:** tambah `.../auth/youtube.upload` dan `.../auth/youtube.readonly`
-   - **Test users:** tambah alamat Gmail anda
-4. **Clients / Credentials → Create OAuth client ID**:
+   - **Scopes:** `.../auth/youtube.upload` dan `.../auth/youtube.readonly`
+   - **Test users:** alamat Gmail anda
+4. Pergi ke **Clients / Credentials → Create OAuth client ID** dan tetapkan:
    - **Application type:** Web application
-   - **Authorized redirect URIs:** `PUBLIC_URL/oauth/callback/google`
-5. Simpan Client ID dan Client Secret ke Worker:
+   - **Authorized redirect URIs:** `API_URL/oauth/callback/google`
+5. Simpan Client ID dan Client Secret sebagai rahsia Supabase:
 
 ```bash
-npx wrangler secret put GOOGLE_CLIENT_ID
-```
-
-```bash
-npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx supabase secrets set GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=...
 ```
 
 **Perkara penting tentang YouTube:**
 
-- **Log masuk tamat selepas 7 hari jika app dalam mod "Testing".** Selagi app dalam mod Testing, Google tamatkan log masuk selepas 7 hari. Tukar **Publishing status** kepada **In production** supaya ia tidak tamat. Google akan memaparkan amaran "app belum disahkan" semasa log masuk. Untuk kegunaan sendiri, tekan *Advanced → Go to …*.
-- **Video terkunci "Private" sehingga projek lulus audit.** YouTube mengunci video yang dimuat naik melalui projek API yang belum diaudit pada mod **Private**. Untuk siaran Public, mohon audit melalui borang *YouTube API Services – Audit and Quota Extension*. Sebelum lulus, video tetap dimuat naik dan anda boleh tukar ke Public secara manual di YouTube Studio.
-- **Had kuota harian.** Kuota percuma ialah 10,000 unit sehari, dan satu muat naik menggunakan kira-kira 1,600 unit. Jadi had anda kira-kira 6 video sehari.
+- **Tukar status app ke "In production".** Selagi app berstatus **Testing**, log masuk YouTube tamat selepas 7 hari. Selepas ditukar, Google memaparkan amaran "app belum disahkan" semasa log masuk. Untuk kegunaan sendiri, tekan *Advanced → Go to …*.
+- **Video terkunci Private sehingga projek diaudit.** YouTube mengunci video yang dimuat naik melalui projek API yang belum diaudit sebagai **Private**. Untuk siaran Public, mohon audit melalui borang *YouTube API Services – Audit and Quota Extension*. Sebelum audit lulus, video tetap dimuat naik, dan anda boleh menukarnya ke Public secara manual di YouTube Studio.
+- **Had kuota harian.** Kuota percuma ialah 10,000 unit sehari, dan satu muat naik menggunakan kira-kira 1,600 unit. Ini bersamaan kira-kira 6 video sehari.
 
 ---
 
 ## 4. Facebook Page & Instagram (Meta for Developers)
 
 1. Buka https://developers.facebook.com/apps dan pilih **Create app**.
-2. Pilih *use case* berikut (jika ditanya):
+2. Jika ditanya, pilih *use case* berikut:
    - **Authenticate and request data from users with Facebook Login**
    - **Manage everything on your Page**
    - **Manage messaging & content on Instagram**
-3. Pastikan kebenaran berikut ditambah: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `business_management`, `instagram_basic`, `instagram_content_publish`.
-4. **Facebook Login → Settings → Valid OAuth Redirect URIs:** `PUBLIC_URL/oauth/callback/meta`
-5. **App settings → Basic**. Salin **App ID** dan **App Secret**, kemudian simpan ke Worker:
+3. Pastikan kebenaran ini ditambah: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `business_management`, `instagram_basic`, `instagram_content_publish`.
+4. Pergi ke **Facebook Login → Settings**. Dalam **Valid OAuth Redirect URIs**, masukkan `API_URL/oauth/callback/meta`.
+5. Pergi ke **App settings → Basic**, kemudian simpan App ID dan App Secret sebagai rahsia Supabase:
 
 ```bash
-npx wrangler secret put META_APP_ID
-```
-
-```bash
-npx wrangler secret put META_APP_SECRET
+npx supabase secrets set META_APP_ID=... META_APP_SECRET=...
 ```
 
 **Perkara penting tentang Meta:**
 
-- **Mod Development memadai untuk kegunaan sendiri.** App boleh kekal dalam mod Development, kerana mod ini berfungsi untuk akaun yang mempunyai peranan dalam app (anda sebagai admin). App Review hanya perlu jika orang lain akan menggunakannya.
-- **Satu log masuk untuk Facebook dan Instagram.** Satu log masuk Facebook menyambungkan **kedua-dua** kad Facebook dan Instagram, jika Page itu mempunyai IG Professional yang dipautkan. Jika anda ada beberapa Page, aplikasi akan meminta anda memilih satu.
-- **Semak versi Graph API.** `GRAPH_VERSION` dalam `wrangler.toml` ditetapkan kepada `v23.0`. Semak versi semasa di https://developers.facebook.com/docs/graph-api/changelog dan kemas kini jika versi itu sudah tamat.
+- **Mod Development memadai untuk kegunaan sendiri.** App boleh kekal dalam mod Development kerana ia berfungsi untuk akaun yang mempunyai peranan dalam app, iaitu anda sebagai admin.
+- **Satu log masuk untuk Facebook dan Instagram.** Satu log masuk Facebook menyambungkan **kedua-dua** kad Facebook dan Instagram. Jika anda ada beberapa Page, aplikasi meminta anda memilih satu.
+- **Versi Graph API.** Kod menggunakan versi `v23.0`. Jika Meta sudah menamatkan versi itu, tetapkan versi semasa (semak di https://developers.facebook.com/docs/graph-api/changelog):
+
+```bash
+npx supabase secrets set GRAPH_VERSION=v24.0
+```
 
 ---
 
@@ -167,70 +167,55 @@ npx wrangler secret put META_APP_SECRET
 
 1. Dalam app Meta yang sama, tambah use case **Access the Threads API**.
 2. Tambah kebenaran `threads_basic` dan `threads_content_publish`.
-3. **Threads settings:**
-   - **Redirect Callback URL:** `PUBLIC_URL/oauth/callback/threads`
-   - Masukkan URL yang sama untuk *Uninstall* dan *Delete* callback jika diminta.
-4. **App roles → Roles → Threads Testers**. Tambah nama pengguna Threads anda.
-5. Buka Threads (web atau app) → **Settings → Account → Website permissions → Invites**, kemudian **terima** jemputan itu.
-6. Salin **Threads App ID** dan **Threads App Secret**. Nilai ini **berbeza** daripada Meta App ID. Simpan ke Worker:
+3. Dalam **Threads settings**, tetapkan **Redirect Callback URL** kepada `API_URL/oauth/callback/threads`. Jika diminta, masukkan URL yang sama untuk *Uninstall* dan *Delete* callback.
+4. Pergi ke **App roles → Roles → Threads Testers** dan tambah nama pengguna Threads anda.
+5. Di Threads (web atau app), buka **Settings → Account → Website permissions → Invites**, kemudian **terima** jemputan itu.
+6. Simpan **Threads App ID** dan **Threads App Secret** sebagai rahsia Supabase. Nilai ini **berbeza** daripada Meta App ID.
 
 ```bash
-npx wrangler secret put THREADS_APP_ID
+npx supabase secrets set THREADS_APP_ID=... THREADS_APP_SECRET=...
 ```
 
-```bash
-npx wrangler secret put THREADS_APP_SECRET
-```
+Rahsia baharu terpakai serta-merta, jadi fungsi tidak perlu di-deploy semula.
 
 ---
 
 ## 6. Mula guna
 
 1. Buka aplikasi di GitHub Pages dan tekan butang **Awan** di header.
-2. Masukkan **URL Worker** (`PUBLIC_URL`) dan **APP_PASSWORD**, kemudian tekan **Log masuk**.
-3. Pilih profil (contohnya `apajadiclips`). Pada setiap kad platform, tekan **Log masuk**. Nama akaun sebenar akan dipaparkan dengan titik hijau.
-4. Ulang langkah 3 untuk profil lain, contohnya `shazclipper` dengan akaun Google atau Facebook yang lain.
+2. Masukkan **URL projek Supabase** (`PROJECT_URL`, contohnya `https://abcd1234.supabase.co`) dan **APP_PASSWORD**, kemudian tekan **Log masuk**.
+3. Pilih profil, contohnya `apajadiclips`, dan tekan **Log masuk** pada setiap kad platform. Nama akaun sebenar akan dipaparkan bersama titik hijau.
+4. Ulang untuk profil lain, contohnya `shazclipper` dengan akaun Google atau Facebook yang lain.
 5. Muat naik video, isi tajuk dan kapsyen, tetapkan masa, kemudian tekan **Schedule All Posts → Sahkan & Jadualkan Sekarang**.
-6. Ikuti status setiap platform dalam **Jadual**: Dijadualkan → Sedang dihantar → Disiarkan, berserta pautan **Lihat siaran**. Jika gagal, sebab kegagalan dipaparkan dan anda boleh tekan **Cuba semula**.
+6. Ikuti status setiap platform dalam **Jadual**: *Dijadualkan → Sedang dihantar → Disiarkan*, berserta pautan **Lihat siaran**. Jika gagal, sebabnya dipaparkan dan anda boleh tekan **Cuba semula**.
 
 Tanpa log masuk ke pelayan, aplikasi kekal dalam mod setempat seperti sebelum ini.
 
 ---
 
-## Had & nota
+## Had pelan percuma Supabase & nota
 
 | Perkara | Keterangan |
 |---|---|
-| Kos | Semua dalam had percuma Cloudflare. Cron setiap minit ≈ 1,440 permintaan sehari, manakala had percuma ialah 100,000 sehari. Video dipadam daripada R2 selepas semua platform berjaya disiarkan. |
-| Saiz video | Fail besar dimuat naik dalam bahagian 20 MB, jadi had 100 MB setiap permintaan Worker tidak menjadi masalah. |
-| Kualiti (360p–2K) | Hanya label. Pelayan **tidak** menukar resolusi video, jadi eksport video pada kualiti yang dikehendaki sebelum muat naik. |
-| Kapsyen | Instagram: maksimum 2,200 aksara. Threads: maksimum 500 aksara (dipotong secara automatik). Untuk Instagram dan Threads, tajuk digabungkan di atas kapsyen. |
-| YouTube Shorts | Video 9:16 yang ≤ 3 minit menjadi Shorts. `#Shorts` ditambah secara automatik pada video 9:16. |
-| Thumbnail | YouTube: memerlukan saluran yang disahkan (verified). Instagram: digunakan sebagai cover. Facebook: tidak disokong melalui cara ini. |
-| Token | Pelayan memperbaharui token YouTube dan Threads secara automatik. Jika status menunjukkan "sila sambung semula", tekan Putus dan Log masuk semula. |
-| Keselamatan | Token akaun disulitkan (AES-GCM) dalam D1. Pautan video untuk Meta ditandatangani dan tamat selepas 12 jam. Jangan kongsi `APP_PASSWORD`. |
+| Saiz video | **Maksimum 50 MB** setiap fail pada pelan percuma. Aplikasi memberi amaran jika video lebih besar. Video 1080p sepanjang 60 saat biasanya 20–60 MB. |
+| Storan | 1 GB. Video dipadam selepas semua platform berjaya disiarkan. Jika siaran gagal, video disimpan 3 hari supaya boleh dicuba semula. |
+| Projek dijeda | Supabase menjeda projek percuma yang tidak aktif. Jika projek dijeda, buka dashboard dan tekan **Restore project**. |
+| Kualiti (360p–2K) | Hanya label. Pelayan **tidak** menukar resolusi, jadi eksport video pada kualiti yang dikehendaki sebelum muat naik. |
+| Kapsyen | Instagram: maksimum 2,200 aksara. Threads: maksimum 500 aksara (dipotong secara automatik). Pada Instagram dan Threads, tajuk diletakkan di atas kapsyen. |
+| YouTube Shorts | Video 9:16 yang ≤ 3 minit dikira sebagai Shorts. `#Shorts` ditambah secara automatik. |
+| Thumbnail | **YouTube:** perlukan saluran yang disahkan. **Instagram:** digunakan sebagai cover. **Facebook:** tidak disokong. |
+| Keselamatan | Jadual pangkalan data dilindungi RLS, jadi kunci awam tidak boleh membacanya. Token akaun disulitkan dengan AES-GCM. Jangan kongsi `APP_PASSWORD`. |
 
-## Uji di komputer sendiri (pilihan)
+## Jika ada masalah
 
-1. Dalam `worker/`, cipta fail `.dev.vars` yang mengandungi rahsia di atas, satu `NAMA=nilai` setiap baris. Fail ini tidak di-commit.
-2. Cipta jadual dalam D1 setempat:
+- **Log fungsi:** Dashboard → **Edge Functions → api → Logs**.
+- **Ralat kunci / "Invalid API key":**
+  1. Pergi ke Dashboard → **Project Settings → API Keys** dan salin kunci `service_role` dan `anon`. Jika projek anda menggunakan kunci baharu, salin kunci *secret* dan *publishable*.
+  2. Tetapkan kedua-duanya sebagai rahsia:
 
-```bash
-npm run db:init:local
-```
+     ```bash
+     npx supabase secrets set SERVICE_ROLE_KEY=... ANON_KEY=...
+     ```
 
-3. Jalankan Worker setempat. `--test-scheduled` membolehkan anda mencetuskan cron secara manual melalui `/__scheduled`:
-
-```bash
-npx wrangler dev --test-scheduled --var PUBLIC_URL:http://localhost:8787 --var ALLOWED_ORIGINS:http://localhost:8080
-```
-
-4. Hidangkan `index.html` dari folder utama repo:
-
-```bash
-python3 -m http.server 8080
-```
-
-5. Buka `http://localhost:8080`, tekan **Awan**, dan gunakan URL `http://localhost:8787`.
-
-Log masuk sebenar ke platform tidak boleh diuji secara setempat, kerana redirect URI mestilah `PUBLIC_URL` yang berdaftar.
+- **Jadual tidak berjalan:** semak **Integrations → Cron → Jobs → History**, dan pastikan `CRON_SECRET` dalam `cron.sql` sama dengan rahsia fungsi.
+- **"Asal … tiada dalam ALLOWED_ORIGINS":** tetapkan `ALLOWED_ORIGINS` kepada asal laman anda, contohnya `https://apajadiclips.github.io`. Jangan sertakan `/media-sosial/`.
