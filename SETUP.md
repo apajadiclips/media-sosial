@@ -102,10 +102,13 @@ npx supabase functions deploy api --no-verify-jwt
 
 ### Hidupkan penjadual (sekali sahaja)
 
-1. Buka fail `supabase/cron.sql`.
-2. Gantikan `GANTI_PROJECT_REF` dengan Project ref anda.
-3. Gantikan `GANTI_CRON_SECRET` dengan nilai `CRON_SECRET` yang anda tetapkan tadi.
-4. Salin seluruh kandungan fail ke **Supabase Dashboard → SQL Editor**, kemudian tekan **Run**.
+1. Dalam **Supabase Dashboard → SQL Editor**, simpan rahsia penjadual dalam Vault. Gantikan `NILAI_CRON_SECRET` dengan nilai `CRON_SECRET` yang anda tetapkan tadi:
+
+   ```sql
+   select vault.create_secret('NILAI_CRON_SECRET', 'cron_secret');
+   ```
+
+2. Buka fail `supabase/cron.sql`, gantikan `GANTI_PROJECT_REF` dengan Project ref anda, salin seluruh kandungannya ke SQL Editor, kemudian tekan **Run**.
 
 Untuk menyemak bahawa penjadual berjalan, pergi ke **Integrations → Cron → Jobs**. Anda patut nampak `media-sosial-sender-tick` berjalan setiap minit.
 
@@ -217,5 +220,5 @@ Tanpa log masuk ke pelayan, aplikasi kekal dalam mod setempat seperti sebelum in
      npx supabase secrets set SERVICE_ROLE_KEY=... ANON_KEY=...
      ```
 
-- **Jadual tidak berjalan:** semak **Integrations → Cron → Jobs → History**, dan pastikan `CRON_SECRET` dalam `cron.sql` sama dengan rahsia fungsi.
+- **Jadual tidak berjalan:** semak **Integrations → Cron → Jobs → History**, dan pastikan rahsia Vault `cron_secret` sama dengan rahsia fungsi `CRON_SECRET`.
 - **"Asal … tiada dalam ALLOWED_ORIGINS":** tetapkan `ALLOWED_ORIGINS` kepada asal laman anda, contohnya `https://apajadiclips.github.io`. Jangan sertakan `/media-sosial/`.
